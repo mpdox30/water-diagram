@@ -38,7 +38,19 @@
 <body>
 
     <div id="sidebar">
-        <h2 style="font-size: 16px; color: #0056b3; text-align: center; margin-top: 0;">เครื่องมือจัดการผังน้ำ<br><span style="font-size:12px; font-weight:normal; color:#666;">ตำบลนครป่าหมาก (ข้อมูลจาก engine อัตโนมัติ)</span></h2>
+        <h2 style="font-size: 16px; color: #0056b3; text-align: center; margin-top: 0;">เครื่องมือจัดการผังน้ำ</h2>
+
+        <!-- 1. เลือกตำบล (เพิ่มตามคำขอของ Ton) — เลือกตำบลแล้วสั่งรัน engine ใหม่ได้จากปุ่มนี้เลย
+             ผ่าน public.nw_trigger_engine_run() ซึ่งตรวจรหัสผ่าน manager_tab ก่อน แล้วยิง request ไปที่
+             engine service บน Render (ดู ADR-005) — ต้องใช้รหัสผ่าน manager เท่านั้น (ไม่ใช่ villager_form)
+             เพราะรัน engine หนักและไม่ควรให้ใครก็กดได้ -->
+        <div id="tambon-select-section" style="border:1px solid #ddd; border-radius:6px; padding:10px; margin-bottom:12px; background:#f8f9fa;">
+            <label style="font-size:12px; font-weight:bold; color:#0056b3; display:block; margin-bottom:6px;">1. เลือกตำบล</label>
+            <select id="tambon-select" style="width:100%; padding:6px; margin-bottom:8px; font-size:13px; box-sizing:border-box;"></select>
+            <div style="font-size:11px; color:#999; margin-bottom:8px;">ข้อมูลจาก engine อัตโนมัติ + แก้ไขต่อโดยชุมชนได้</div>
+            <button id="btn-run-engine" class="tool-btn" style="width:100%; justify-content:center; box-sizing:border-box;" onclick="onRunEngineClick()">⚙ รัน Engine ใหม่สำหรับตำบลนี้ (manager)</button>
+            <div id="engine-run-status" style="font-size:12px; margin-top:6px; min-height:16px;"></div>
+        </div>
         
         <!-- แถบเครื่องมือ Undo/Redo -->
         <div class="history-controls">
@@ -185,7 +197,24 @@
         // project ซึ่งเสี่ยงกระทบ API เดิม จึงเลี่ยงไม่แตะเลย
         const SUPABASE_URL = 'https://khfixycxjwxcpayiwxap.supabase.co';
         const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_1Iju7_QORaqhtYE4HryrGQ_KzYGx_1i';
-        const TAMBON_ID = '20451bd6-df9d-4214-b2f0-aca23f9f2d91'; // นครป่าหมาก — ข้อจำกัดที่ทราบ: ตอนนี้ยัง hardcode ตำบลเดียว
+
+        // รายชื่อตำบลที่ "พร้อมใช้งาน" กับ engine (มีข้อมูลดิบของจังหวัดนั้น bundle ไว้ใน 02_engine_data/ และ
+        // เตรียมไฟล์ OSM waterway ไว้ใน 01_data_external/osm/ ครบแล้ว) — ตอนนี้มีแค่ตำบลเดียว เพิ่มตำบลใหม่ได้
+        // โดยเพิ่ม object ในลิสต์นี้ (ต้อง bundle ข้อมูลให้ครบก่อน ดู 02_engine_service/README.md)
+        const AVAILABLE_TAMBONS = [
+            {
+                tambon_id: '20451bd6-df9d-4214-b2f0-aca23f9f2d91',
+                name_th: 'ตำบลนครป่าหมาก',
+                amphoe_th: 'บางกระทุ่ม',
+                province_th: 'พิษณุโลก',
+                osm_geojson_filename: 'nakhon_pa_mak_osm_waterways.geojson'
+            }
+        ];
+
+        let TAMBON_ID = AVAILABLE_TAMBONS[0].tambon_id; // เปลี่ยนได้ตอนรันจริงผ่าน dropdown เลือกตำบล
+        const ENGINE_RUN_POLL_MS = 5000;
+        const ENGINE_RUN_TIMEOUT_MS = 10 * 60 * 1000; // 10 นาที กันรอค้างตลอดไปถ้า engine ล้มเหลวเงียบๆ
+
         const supabaseClient = (typeof supabase !== 'undefined')
             ? supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY)
             : null;
@@ -193,12 +222,13 @@
         // โหลดผัง version ปัจจุบัน (is_current=true) ของตำบลนี้จาก Supabase แปลงกลับเป็นฟอร์แมต element ของ
         // Cytoscape.js — คืนค่า null ถ้าโหลดไม่สำเร็จ/ยังไม่เคย publish เข้า Supabase เลย (ให้ fallback ไปใช้
         // engineElements/initialElements แทน ไม่ทำให้หน้าเว็บพังถ้าออฟไลน์/ยังไม่ตั้งค่า)
-        async function loadElementsFromSupabase() {
+        async function loadElementsFromSupabase(tambonId) {
+            tambonId = tambonId || TAMBON_ID;
             if (!supabaseClient) return null;
             try {
                 const [{ data: nodeRows, error: nErr }, { data: edgeRows, error: eErr }] = await Promise.all([
-                    supabaseClient.from('nw_diagram_current_nodes').select('*').eq('tambon_id', TAMBON_ID),
-                    supabaseClient.from('nw_diagram_current_edges').select('*').eq('tambon_id', TAMBON_ID)
+                    supabaseClient.from('nw_diagram_current_nodes').select('*').eq('tambon_id', tambonId),
+                    supabaseClient.from('nw_diagram_current_edges').select('*').eq('tambon_id', tambonId)
                 ]);
                 if (nErr || eErr) { console.error('โหลดผังจาก Supabase ไม่สำเร็จ', nErr, eErr); return null; }
                 if (!nodeRows || nodeRows.length === 0) return null; // ยังไม่เคย publish เข้า Supabase เลย
@@ -220,6 +250,129 @@
                 console.error('โหลดผังจาก Supabase ผิดพลาด', e);
                 return null;
             }
+        }
+
+        // ===== UI เลือกตำบล + สั่งรัน engine ใหม่ (Phase 6, ADR-005) =====
+        function populateTambonSelect() {
+            const sel = document.getElementById('tambon-select');
+            if (!sel) return;
+            sel.innerHTML = '';
+            AVAILABLE_TAMBONS.forEach(t => {
+                const opt = document.createElement('option');
+                opt.value = t.tambon_id;
+                opt.textContent = t.name_th + ' (' + t.amphoe_th + ', ' + t.province_th + ')';
+                sel.appendChild(opt);
+            });
+            sel.value = TAMBON_ID;
+        }
+
+        async function onTambonSelectChange(e) {
+            TAMBON_ID = e.target.value;
+            const statusEl = document.getElementById('engine-run-status');
+            statusEl.style.color = '#666';
+            statusEl.textContent = 'กำลังโหลดผังของตำบลนี้...';
+            const els = await loadElementsFromSupabase(TAMBON_ID);
+            if (els && cy) {
+                cy.elements().remove();
+                cy.add(els);
+                cy.layout({ name: 'preset' }).run();
+                statusEl.textContent = '';
+            } else {
+                statusEl.style.color = '#dc3545';
+                statusEl.textContent = 'ยังไม่มีผังของตำบลนี้ใน Supabase';
+            }
+        }
+
+        function pollEngineRunResult(tambonId, beforeVersionId, statusEl, btn) {
+            const startedAt = Date.now();
+            const timer = setInterval(async () => {
+                if (Date.now() - startedAt > ENGINE_RUN_TIMEOUT_MS) {
+                    clearInterval(timer);
+                    statusEl.style.color = '#dc3545';
+                    statusEl.textContent = 'รอนานเกินไป (เกิน 10 นาที) — engine อาจล้มเหลว ลองเช็ค Logs บน Render dashboard';
+                    btn.disabled = false;
+                    return;
+                }
+                try {
+                    const { data: meta } = await supabaseClient
+                        .from('nw_diagram_latest_version_meta')
+                        .select('version_id, source, created_at')
+                        .eq('tambon_id', tambonId)
+                        .maybeSingle();
+                    if (meta && meta.version_id !== beforeVersionId && meta.source === 'engine') {
+                        clearInterval(timer);
+                        statusEl.style.color = '#28a745';
+                        statusEl.textContent = 'เสร็จแล้ว! กำลังโหลดผังใหม่...';
+                        btn.disabled = false;
+                        const els = await loadElementsFromSupabase(tambonId);
+                        if (els && cy) {
+                            cy.elements().remove();
+                            cy.add(els);
+                            cy.layout({ name: 'preset' }).run();
+                            statusEl.textContent = 'โหลดผังใหม่เรียบร้อยแล้ว (' + els.length + ' element)';
+                        }
+                    }
+                } catch (e) {
+                    console.error('poll สถานะ engine run ผิดพลาด', e); // เงียบไว้ รอ poll รอบถัดไป ไม่ spam ผู้ใช้
+                }
+            }, ENGINE_RUN_POLL_MS);
+        }
+
+        async function onRunEngineClick() {
+            const statusEl = document.getElementById('engine-run-status');
+            const btn = document.getElementById('btn-run-engine');
+            const sel = document.getElementById('tambon-select');
+            const tambon = AVAILABLE_TAMBONS.find(t => t.tambon_id === sel.value);
+            if (!tambon) return;
+
+            const password = prompt('กรอกรหัสผ่าน manager เพื่อยืนยันการรัน engine ใหม่สำหรับ "' + tambon.name_th + '"\n\n' +
+                '(จะสร้างผังเวอร์ชันใหม่ทับผังปัจจุบัน — ผังเดิมยังถูกเก็บไว้เป็นประวัติ ไม่หายไปไหน)');
+            if (!password) return;
+
+            if (!supabaseClient) { statusEl.style.color = '#dc3545'; statusEl.textContent = 'ยังไม่ได้เชื่อมต่อ Supabase'; return; }
+
+            btn.disabled = true;
+            statusEl.style.color = '#856404';
+            statusEl.textContent = 'กำลังส่งคำสั่งรัน engine...';
+
+            try {
+                const { data: beforeMeta } = await supabaseClient
+                    .from('nw_diagram_latest_version_meta')
+                    .select('version_id')
+                    .eq('tambon_id', tambon.tambon_id)
+                    .maybeSingle();
+                const beforeVersionId = beforeMeta ? beforeMeta.version_id : null;
+
+                const { data, error } = await supabaseClient.rpc('nw_trigger_engine_run', {
+                    p_tambon_id: tambon.tambon_id,
+                    p_manager_password: password,
+                    p_province_th: tambon.province_th,
+                    p_amphoe_th: tambon.amphoe_th,
+                    p_tambon_th: tambon.name_th,
+                    p_osm_geojson_filename: tambon.osm_geojson_filename
+                });
+
+                if (error || !data || data.success !== true) {
+                    statusEl.style.color = '#dc3545';
+                    statusEl.textContent = 'ผิดพลาด: ' + ((data && data.error) || (error && error.message) || 'ไม่ทราบสาเหตุ');
+                    btn.disabled = false;
+                    return;
+                }
+
+                statusEl.style.color = '#856404';
+                statusEl.textContent = 'ส่งคำสั่งแล้ว กำลังรอ engine ประมวลผล (อาจใช้เวลา 30 วินาทีถึงหลายนาที ถ้า Render sleep อยู่)...';
+                pollEngineRunResult(tambon.tambon_id, beforeVersionId, statusEl, btn);
+            } catch (e) {
+                statusEl.style.color = '#dc3545';
+                statusEl.textContent = 'ผิดพลาด: ' + e.message;
+                btn.disabled = false;
+            }
+        }
+
+        function setupTambonUI() {
+            populateTambonSelect();
+            const sel = document.getElementById('tambon-select');
+            if (sel) sel.addEventListener('change', onTambonSelectChange);
         }
 
         let cy; // สร้างจริงใน initApp() ด้านล่าง (ต้องรอผลโหลดจาก Supabase ก่อน ถึงจะรู้ว่าจะใช้ elements ชุดไหน)
@@ -397,6 +550,7 @@
         });
 
 
+        setupTambonUI();
         } // จบ initApp()
         initApp();
 
