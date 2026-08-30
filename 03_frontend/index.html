@@ -377,6 +377,7 @@
                     cy.elements().remove();
                     cy.add(els);
                     cy.layout({ name: 'preset' }).run();
+                    cy.fit(undefined, 40); // ปรับมุมมองให้เห็นผังทั้งหมดเสมอ (กันกรณีผังสูง/กว้างกว่าที่จอแสดงพอดี)
                     statusEl.textContent = 'มีผังของตำบลนี้อยู่แล้ว (' + els.length + ' element) — แก้ไขต่อได้เลย หรือกด "รัน Engine ใหม่" เพื่อสร้างทับด้วยข้อมูลล่าสุด';
                 } else if (cy) {
                     cy.elements().remove();
@@ -459,6 +460,7 @@
                             cy.elements().remove();
                             cy.add(els);
                             cy.layout({ name: 'preset' }).run();
+                            cy.fit(undefined, 40); // ปรับมุมมองให้เห็นผังทั้งหมดเสมอ (กันกรณีผังสูง/กว้างกว่าที่จอแสดงพอดี)
                             statusEl.textContent = 'โหลดผังใหม่เรียบร้อยแล้ว (' + els.length + ' element)';
                         }
                     }
@@ -599,6 +601,7 @@
 
         // บันทึกสถานะตั้งต้นเมื่อโหลดหน้าเว็บ
         cy.ready(function() {
+            if (cy.elements().length > 0) cy.fit(undefined, 40); // ปรับมุมมองให้เห็นผังทั้งหมดเสมอ (กันกรณีผังสูง/กว้างกว่าที่จอแสดงพอดี)
             saveState();
         });
 
