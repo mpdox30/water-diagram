@@ -46,20 +46,25 @@ def _normalize_thai_admin_name(name: str) -> str:
     return name
 
 
+def _sql_escape(s: str) -> str:
+    return s.replace("'", "''")
+
+
 def get_tambon_bbox_wgs84(data_raw_dir: str, province_th: str, amphoe_th: str, tambon_th: str, buffer_m: float):
-    """คืนค่า (south, west, north, east) ของขอบเขตตำบล+buffer แปลงเป็น EPSG:4326 (lat/lon) สำหรับ query Overpass"""
+    """คืนค่า (south, west, north, east) ของขอบเขตตำบล+buffer แปลงเป็น EPSG:4326 (lat/lon) สำหรับ query Overpass
+    ใช้ where= (pushdown filter ระดับ GDAL/OGR) แทนการโหลดทั้งไฟล์แล้วกรองด้วย pandas — กัน OOM บน container
+    RAM น้อย (ดูรายละเอียดใน 01_data_ingestion.py::load_tambon_boundary ที่เจอปัญหานี้จริงบน Render free tier)"""
     tambon_shp = f"{data_raw_dir}/admin_boundary/THA_Tambon.shp"
-    gdf = gpd.read_file(tambon_shp)
     norm_province, norm_amphoe, norm_tambon = (
         _normalize_thai_admin_name(province_th),
         _normalize_thai_admin_name(amphoe_th),
         _normalize_thai_admin_name(tambon_th),
     )
-    match = gdf[
-        (gdf["P_NAME_T"].apply(_normalize_thai_admin_name) == norm_province)
-        & (gdf["A_NAME_T"].apply(_normalize_thai_admin_name) == norm_amphoe)
-        & (gdf["T_NAME_T"].apply(_normalize_thai_admin_name) == norm_tambon)
-    ]
+    where_clause = (
+        f"P_NAME_T = '{_sql_escape(norm_province)}' AND A_NAME_T = '{_sql_escape(norm_amphoe)}' "
+        f"AND T_NAME_T = '{_sql_escape(norm_tambon)}'"
+    )
+    match = gpd.read_file(tambon_shp, where=where_clause)
     if len(match) == 0:
         raise ValueError(f"ไม่พบตำบล '{tambon_th}' อำเภอ '{amphoe_th}' จังหวัด '{province_th}' ใน THA_Tambon.shp "
                           f"— ตรวจสอบว่าสะกดชื่อตรงกับที่อยู่ในชุดข้อมูลขอบเขตทางการหรือไม่")

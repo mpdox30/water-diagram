@@ -161,22 +161,30 @@ def _normalize_thai_admin_name(name: str) -> str:
     return name
 
 
+def _sql_escape(s: str) -> str:
+    return s.replace("'", "''")
+
+
 def load_tambon_boundary(data_raw_dir: str, province_th: str, amphoe_th: str, tambon_th: str):
     """โหลดขอบเขตตำบลที่ต้องการจาก THA_Tambon.shp (ระบุครบ 3 ระดับเพื่อกันชื่อตำบลซ้ำกันข้ามอำเภอ/จังหวัด)
     เทียบชื่อแบบตัดคำนำหน้าออกก่อนเสมอ (ดู _normalize_thai_admin_name) เพราะแหล่งข้อมูลแต่ละที่ใส่คำนำหน้าไม่
-    ตรงกัน"""
+    ตรงกัน — ค่าในไฟล์ THA_Tambon.dbf เองไม่มีคำนำหน้าอยู่แล้ว (ตรวจสอบแล้ว) จึงตัดคำนำหน้าแค่ฝั่งค่าที่รับเข้ามา
+
+    **สำคัญเรื่อง memory (เพิ่มเมื่อ 2026-08-30 หลังเจอ 502 Bad Gateway บน Render free tier 512MB)**: ห้ามใช้
+    gpd.read_file(tambon_shp) เฉย ๆ แล้วค่อยกรองด้วย pandas — วิธีนั้นโหลดทั้ง 8,105 ตำบลทั่วประเทศ (พร้อม
+    geometry เต็ม) เข้า memory ก่อนเสมอ ซึ่งกิน RAM มากเกินไปสำหรับ container ขนาดเล็ก ใช้ where= (pushdown
+    filter ระดับ GDAL/OGR ผ่าน pyogrio) แทน เพื่อให้โหลดเข้ามาแค่แถวที่ตรงจริง ๆ (ปกติ 0-1 แถว)"""
     tambon_shp = os.path.join(data_raw_dir, "admin_boundary", "THA_Tambon.shp")
-    gdf = gpd.read_file(tambon_shp)
     norm_province, norm_amphoe, norm_tambon = (
         _normalize_thai_admin_name(province_th),
         _normalize_thai_admin_name(amphoe_th),
         _normalize_thai_admin_name(tambon_th),
     )
-    match = gdf[
-        (gdf["P_NAME_T"].apply(_normalize_thai_admin_name) == norm_province)
-        & (gdf["A_NAME_T"].apply(_normalize_thai_admin_name) == norm_amphoe)
-        & (gdf["T_NAME_T"].apply(_normalize_thai_admin_name) == norm_tambon)
-    ]
+    where_clause = (
+        f"P_NAME_T = '{_sql_escape(norm_province)}' AND A_NAME_T = '{_sql_escape(norm_amphoe)}' "
+        f"AND T_NAME_T = '{_sql_escape(norm_tambon)}'"
+    )
+    match = gpd.read_file(tambon_shp, where=where_clause)
     if len(match) == 0:
         raise ValueError(f"ไม่พบตำบล '{tambon_th}' อำเภอ '{amphoe_th}' จังหวัด '{province_th}' ใน THA_Tambon.shp")
     if len(match) > 1:

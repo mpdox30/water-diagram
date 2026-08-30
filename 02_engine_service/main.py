@@ -17,10 +17,14 @@ requirements.txt ในโฟลเดอร์นี้แล้ว
 anon/authenticated) — ดู migration `create engine-only publish wrapper` ในโปรเจกต์ Supabase — เพื่อให้ผังที่
 publish ทางนี้ติด source='engine' ให้ตรงกับความจริง (แยกจาก source='community' ที่มาจากฟอร์มชุมชน)
 
-**ข้อจำกัดที่ยังคงอยู่ (v1)**: ไฟล์ OSM waterway GeoJSON ของแต่ละตำบลยังต้องเตรียมไว้ล่วงหน้า (วางไว้ที่
-01_data_external/osm/<slug>_osm_waterways.geojson) ตามข้อจำกัดเดิมที่บันทึกไว้ใน 01_data_ingestion.py — ยังไม่
-ได้ลองให้ service นี้ดึงจาก Overpass API สดเอง (เป็นไปได้ว่า Render จะเข้าถึง Overpass ได้ต่างจาก sandbox
-พัฒนา แต่ยังไม่ได้ทดสอบจริง — ถือเป็นงานต่อยอด ไม่ใช่ v1)
+**อัปเดต 2026-08-30**: ถ้าไม่ระบุ osm_geojson_filename (หรือไฟล์ที่ระบุไม่มีจริง) จะดึงเส้นทางน้ำจาก OSM สด
+ผ่าน Overpass API เอง (ดู 00_fetch_osm_waterways.py) — ทดสอบแล้วว่า Render เรียก Overpass ได้จริง (ต่างจาก
+cloud sandbox/เครื่อง Ton ที่บล็อกเครือข่ายส่วนนี้)
+
+**สำคัญ**: /run-engine ตอบ 202 กลับทันทีแล้วรัน pipeline จริงเป็น background task (ไม่รอผลก่อนตอบ) เพราะเจอ
+502 Bad Gateway จริงตอนทดสอบ (สาเหตุน่าจะเป็น Render proxy timeout เพราะ pipeline ใช้เวลานานกว่าที่ proxy รอ
+ไหว) — ผลลัพธ์จริงดูได้จาก Supabase (nw_diagram_latest_version_meta) หรือ Render Logs เท่านั้น ไม่ใช่จาก
+response ของ endpoint นี้โดยตรง
 """
 
 import json
@@ -34,7 +38,9 @@ from pathlib import Path
 from typing import Optional
 
 import requests
-from fastapi import FastAPI, Header, HTTPException
+import traceback
+
+from fastapi import BackgroundTasks, FastAPI, Header, HTTPException
 from pydantic import BaseModel
 
 BASE_DIR = Path(__file__).resolve().parent.parent  # 06_web_platform/
@@ -129,28 +135,27 @@ def healthz():
     return {"status": "ok"}
 
 
-@app.post("/run-engine")
-def run_engine(req: RunEngineRequest, x_engine_secret: str = Header(default="")):
-    if not ENGINE_TRIGGER_SECRET or x_engine_secret != ENGINE_TRIGGER_SECRET:
-        raise HTTPException(status_code=401, detail="ไม่ได้รับอนุญาต (X-Engine-Secret ไม่ถูกต้อง)")
-    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
-        raise HTTPException(status_code=500, detail="ยังไม่ได้ตั้งค่า SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY")
+def _run_engine_pipeline(req: RunEngineRequest):
+    """เนื้องานจริงทั้งหมด (fetch OSM ถ้าจำเป็น -> 4 phase ของ engine -> publish เข้า Supabase) แยกออกมาจาก
+    endpoint handler เพื่อให้รันเป็น background task ได้ (ดูเหตุผลที่ /run-engine ด้านล่าง) — ฟังก์ชันนี้ไม่มี
+    request/response ให้คุยด้วยแล้ว ทุก error จึงแค่ print ไปที่ stderr (ขึ้น Render Logs ให้เห็นตรง ๆ) ไม่ raise
+    ต่อให้ใครรอ เพราะไม่มีใครรอฟังจริง ๆ (pg_net ฝั่ง Supabase ก็ตั้งใจไม่รอคำตอบอยู่แล้ว ดู nw_trigger_engine_run)
+    """
+    try:
+        osm_path = OSM_DIR / req.osm_geojson_filename if req.osm_geojson_filename else None
+        if osm_path is not None and not osm_path.exists():
+            osm_path = None  # ไฟล์ที่ระบุมาไม่มีจริง — ลองดึงสดแทนด้านล่าง เหมือนไม่ได้ระบุมา
 
-    osm_path = OSM_DIR / req.osm_geojson_filename if req.osm_geojson_filename else None
-    if osm_path is not None and not osm_path.exists():
-        osm_path = None  # ไฟล์ที่ระบุมาไม่มีจริง — ลองดึงสดแทนด้านล่าง เหมือนไม่ได้ระบุมา
+        with tempfile.TemporaryDirectory(prefix="engine_run_") as tmp:
+            tmp = Path(tmp)
+            phase1_dir = tmp / "phase1"
+            phase2_dir = tmp / "phase2"
+            phase3_dir = tmp / "phase3"
+            out_js = tmp / "output.js"
 
-    with tempfile.TemporaryDirectory(prefix="engine_run_") as tmp:
-        tmp = Path(tmp)
-        phase1_dir = tmp / "phase1"
-        phase2_dir = tmp / "phase2"
-        phase3_dir = tmp / "phase3"
-        out_js = tmp / "output.js"
-
-        if osm_path is None:
-            # ไม่มีไฟล์ OSM เตรียมไว้ล่วงหน้า — ดึงสดจาก Overpass API (ตำบลใหม่ที่เลือกจากหน้าเว็บโดยตรง)
-            fetched_osm_path = tmp / "osm_waterways_fetched.geojson"
-            try:
+            if osm_path is None:
+                # ไม่มีไฟล์ OSM เตรียมไว้ล่วงหน้า — ดึงสดจาก Overpass API (ตำบลใหม่ที่เลือกจากหน้าเว็บโดยตรง)
+                fetched_osm_path = tmp / "osm_waterways_fetched.geojson"
                 _run_step([
                     str(ENGINE_DIR / "00_fetch_osm_waterways.py"),
                     "--data-raw-dir", str(DATA_RAW_DIR),
@@ -159,67 +164,78 @@ def run_engine(req: RunEngineRequest, x_engine_secret: str = Header(default=""))
                     "--tambon", req.tambon_th,
                     "--out-geojson", str(fetched_osm_path),
                 ], cwd=ENGINE_DIR)
-            except HTTPException as e:
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"ดึงข้อมูล OSM สดจาก Overpass API ไม่สำเร็จ สำหรับตำบล '{req.tambon_th}' "
-                           f"({e.detail}) — ต้องให้ทีมพัฒนาเตรียมไฟล์ OSM waterway GeoJSON ให้ด้วยมือแทน "
-                           f"(ผ่านเบราว์เซอร์จริงที่มีอินเทอร์เน็ต) แล้วค่อยลองใหม่",
-                )
-            osm_path = fetched_osm_path
+                osm_path = fetched_osm_path
 
-        _run_step([
-            str(ENGINE_DIR / "01_data_ingestion.py"),
-            "--data-raw-dir", str(DATA_RAW_DIR),
-            "--osm-geojson", str(osm_path),
-            "--province", req.province_th,
-            "--amphoe", req.amphoe_th,
-            "--tambon", req.tambon_th,
-            "--out-dir", str(phase1_dir),
-        ], cwd=ENGINE_DIR)
+            _run_step([
+                str(ENGINE_DIR / "01_data_ingestion.py"),
+                "--data-raw-dir", str(DATA_RAW_DIR),
+                "--osm-geojson", str(osm_path),
+                "--province", req.province_th,
+                "--amphoe", req.amphoe_th,
+                "--tambon", req.tambon_th,
+                "--out-dir", str(phase1_dir),
+            ], cwd=ENGINE_DIR)
 
-        _run_step([
-            str(ENGINE_DIR / "02_topology_graph.py"),
-            "--phase1-dir", str(phase1_dir),
-            "--out-dir", str(phase2_dir),
-        ], cwd=ENGINE_DIR)
+            _run_step([
+                str(ENGINE_DIR / "02_topology_graph.py"),
+                "--phase1-dir", str(phase1_dir),
+                "--out-dir", str(phase2_dir),
+            ], cwd=ENGINE_DIR)
 
-        _run_step([
-            str(ENGINE_DIR / "03_schematic_layout.py"),
-            "--phase2-dir", str(phase2_dir),
-            "--out-dir", str(phase3_dir),
-        ], cwd=ENGINE_DIR)
+            _run_step([
+                str(ENGINE_DIR / "03_schematic_layout.py"),
+                "--phase2-dir", str(phase2_dir),
+                "--out-dir", str(phase3_dir),
+            ], cwd=ENGINE_DIR)
 
-        _run_step([
-            str(ENGINE_DIR / "04_export_frontend_data.py"),
-            "--phase3-dir", str(phase3_dir),
-            "--out-js", str(out_js),
-        ], cwd=ENGINE_DIR)
+            _run_step([
+                str(ENGINE_DIR / "04_export_frontend_data.py"),
+                "--phase3-dir", str(phase3_dir),
+                "--out-js", str(out_js),
+            ], cwd=ENGINE_DIR)
 
-        elements = _parse_js_elements_file(out_js)
-        nodes, edges = _cytoscape_elements_to_nw_format(elements)
+            elements = _parse_js_elements_file(out_js)
+            nodes, edges = _cytoscape_elements_to_nw_format(elements)
 
-    resp = requests.post(
-        f"{SUPABASE_URL}/rest/v1/rpc/nw_save_diagram_engine",
-        headers={
-            "apikey": SUPABASE_SERVICE_ROLE_KEY,
-            "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
-            "Content-Type": "application/json",
-        },
-        json={
-            "p_tambon_id": req.tambon_id,
-            "p_label": req.label,
-            "p_entered_by": req.entered_by,
-            "p_nodes": nodes,
-            "p_edges": edges,
-        },
-        timeout=30,
-    )
-    if resp.status_code >= 300:
-        raise HTTPException(status_code=502, detail=f"Supabase publish ล้มเหลว: {resp.status_code} {resp.text}")
+        resp = requests.post(
+            f"{SUPABASE_URL}/rest/v1/rpc/nw_save_diagram_engine",
+            headers={
+                "apikey": SUPABASE_SERVICE_ROLE_KEY,
+                "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+                "Content-Type": "application/json",
+            },
+            json={
+                "p_tambon_id": req.tambon_id,
+                "p_label": req.label,
+                "p_entered_by": req.entered_by,
+                "p_nodes": nodes,
+                "p_edges": edges,
+            },
+            timeout=30,
+        )
+        if resp.status_code >= 300:
+            print(f"[run-engine] publish เข้า Supabase ล้มเหลว: {resp.status_code} {resp.text}", file=sys.stderr)
+            return
 
-    return {
-        "n_nodes": len(nodes),
-        "n_edges": len(edges),
-        "supabase_response": resp.json(),
-    }
+        print(f"[run-engine] สำเร็จ: tambon_id={req.tambon_id} n_nodes={len(nodes)} n_edges={len(edges)}")
+    except Exception:
+        print(f"[run-engine] pipeline ล้มเหลวสำหรับ tambon_id={req.tambon_id} ({req.province_th}/{req.amphoe_th}/"
+              f"{req.tambon_th}):", file=sys.stderr)
+        traceback.print_exc()
+
+
+@app.post("/run-engine")
+def run_engine(req: RunEngineRequest, background_tasks: BackgroundTasks, x_engine_secret: str = Header(default="")):
+    # **สำคัญ (เพิ่มเมื่อ 2026-08-30 หลังเจอ 502 Bad Gateway จริงบน Render)**: engine pipeline ใช้เวลานานกว่า
+    # request timeout ของ Render proxy เอง (ไม่ได้ทดสอบตัวเลขแน่ชัด แต่พฤติกรรมจริงคือ proxy ตัดคำขอเองแล้วส่ง
+    # 502 กลับให้ผู้เรียกก่อนที่ pipeline จะทำงานเสร็จ) endpoint นี้จึงตรวจสอบแค่สิทธิ์/พารามิเตอร์เบื้องต้น
+    # (เร็ว) แล้วส่งงานจริงไปรันเป็น background task ตอบ 202 กลับทันที — สอดคล้องกับฝั่งหน้าเว็บอยู่แล้วที่ไม่ได้
+    # รอคำตอบจาก endpoint นี้โดยตรง แต่ poll เช็คผลจาก Supabase แทน (ดู pollEngineRunResult ใน index.html)
+    if not ENGINE_TRIGGER_SECRET or x_engine_secret != ENGINE_TRIGGER_SECRET:
+        raise HTTPException(status_code=401, detail="ไม่ได้รับอนุญาต (X-Engine-Secret ไม่ถูกต้อง)")
+    if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
+        raise HTTPException(status_code=500, detail="ยังไม่ได้ตั้งค่า SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY")
+
+    background_tasks.add_task(_run_engine_pipeline, req)
+    return {"status": "accepted", "message": "รับคำสั่งแล้ว กำลังประมวลผลเบื้องหลัง — เช็คผลได้จากหน้าเว็บ (poll "
+                                              "Supabase) หรือ Render Logs"}
