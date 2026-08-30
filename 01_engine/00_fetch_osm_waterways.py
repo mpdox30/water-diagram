@@ -87,17 +87,27 @@ def build_overpass_query(bbox):
 
 
 def fetch_overpass(query: str):
-    last_err = None
+    errors = []
     for endpoint in OVERPASS_ENDPOINTS:
+        resp = None
         try:
             resp = requests.post(endpoint, data={"data": query}, timeout=90)
             resp.raise_for_status()
             return resp.json()
         except Exception as e:  # noqa: BLE001 — ตั้งใจดักทุก error เพื่อลอง endpoint ถัดไป
-            last_err = e
+            body_snippet = ""
+            if resp is not None:
+                try:
+                    body_snippet = resp.text[:500].replace("\n", " ")
+                except Exception:
+                    pass
+            detail = f"{endpoint} -> {e}" + (f" | response body (500 ตัวอักษรแรก): {body_snippet}" if body_snippet else "")
+            print(f"[fetch_overpass] endpoint นี้ล้มเหลว: {detail}", file=sys.stderr)
+            errors.append(detail)
             continue
-    raise RuntimeError(f"เรียก Overpass API ไม่สำเร็จทั้ง {len(OVERPASS_ENDPOINTS)} endpoint ที่ลอง — "
-                        f"error ล่าสุด: {last_err}")
+    raise RuntimeError(
+        f"เรียก Overpass API ไม่สำเร็จทั้ง {len(OVERPASS_ENDPOINTS)} endpoint ที่ลอง:\n" + "\n".join(errors)
+    )
 
 
 def overpass_to_geojson(overpass_json: dict) -> dict:
