@@ -145,11 +145,38 @@ def build_province_folder_map(data_raw_dir: str) -> dict:
     return name_to_folder
 
 
+# แหล่งข้อมูลชื่อตำบล/อำเภอต่าง ๆ ที่ระบบนี้เชื่อมด้วย (ตาราง tambons ของ Supabase ที่มีอยู่ก่อน, ชุด
+# THA_Tambon.shp ทั่วประเทศ, หน้าเว็บที่ผู้ใช้พิมพ์เอง) มีธรรมเนียมใส่คำนำหน้าชื่อ ("ตำบล", "ต.", "อำเภอ", "อ.")
+# ไม่ตรงกัน (พบระหว่างทำฟีเจอร์เลือกตำบลใหม่ 2026-08-30: THA_Tambon.dbf เก็บชื่อล้วน ๆ "นครป่าหมาก" แต่แถวเดิม
+# ในตาราง tambons ของ Supabase เก็บเป็น "ตำบลนครป่าหมาก" มีคำนำหน้า) — ตัดคำนำหน้าออกทั้งสองฝั่งก่อนเทียบเสมอ
+# กันปัญหาจับคู่ไม่เจอ/เจอผิดเงียบ ๆ
+_THAI_ADMIN_PREFIXES = ["ตำบล", "ต.", "แขวง", "อำเภอ", "อ.", "เขต"]
+
+
+def _normalize_thai_admin_name(name: str) -> str:
+    name = (name or "").strip()
+    for prefix in _THAI_ADMIN_PREFIXES:
+        if name.startswith(prefix):
+            return name[len(prefix):].strip()
+    return name
+
+
 def load_tambon_boundary(data_raw_dir: str, province_th: str, amphoe_th: str, tambon_th: str):
-    """โหลดขอบเขตตำบลที่ต้องการจาก THA_Tambon.shp (ระบุครบ 3 ระดับเพื่อกันชื่อตำบลซ้ำกันข้ามอำเภอ/จังหวัด)"""
+    """โหลดขอบเขตตำบลที่ต้องการจาก THA_Tambon.shp (ระบุครบ 3 ระดับเพื่อกันชื่อตำบลซ้ำกันข้ามอำเภอ/จังหวัด)
+    เทียบชื่อแบบตัดคำนำหน้าออกก่อนเสมอ (ดู _normalize_thai_admin_name) เพราะแหล่งข้อมูลแต่ละที่ใส่คำนำหน้าไม่
+    ตรงกัน"""
     tambon_shp = os.path.join(data_raw_dir, "admin_boundary", "THA_Tambon.shp")
     gdf = gpd.read_file(tambon_shp)
-    match = gdf[(gdf["P_NAME_T"] == province_th) & (gdf["A_NAME_T"] == amphoe_th) & (gdf["T_NAME_T"] == tambon_th)]
+    norm_province, norm_amphoe, norm_tambon = (
+        _normalize_thai_admin_name(province_th),
+        _normalize_thai_admin_name(amphoe_th),
+        _normalize_thai_admin_name(tambon_th),
+    )
+    match = gdf[
+        (gdf["P_NAME_T"].apply(_normalize_thai_admin_name) == norm_province)
+        & (gdf["A_NAME_T"].apply(_normalize_thai_admin_name) == norm_amphoe)
+        & (gdf["T_NAME_T"].apply(_normalize_thai_admin_name) == norm_tambon)
+    ]
     if len(match) == 0:
         raise ValueError(f"ไม่พบตำบล '{tambon_th}' อำเภอ '{amphoe_th}' จังหวัด '{province_th}' ใน THA_Tambon.shp")
     if len(match) > 1:
@@ -314,14 +341,24 @@ def ingest(data_raw_dir: str, osm_geojson_path: str, province_th: str, amphoe_th
     boundary = gpd.GeoSeries([tambon_row.geometry], crs="EPSG:32647")
     boundary_buffered = boundary.buffer(buffer_m)
 
+    # หมายเหตุ (2026-08-30, เพิ่มรองรับตำบล/จังหวัดใหม่แบบ on-demand จากหน้าเว็บ): ตาม ADR-003 mitrearth
+    # เป็นแค่ "ข้อมูลเสริม" ของ OSM ไม่ใช่แหล่งหลัก — ถ้ายังไม่ได้ bundle ข้อมูล provincial_gis ของจังหวัดนี้ไว้
+    # (เช่น เพิ่งเลือกตำบลใหม่ในจังหวัดที่ยังไม่เคยเตรียมข้อมูล mitrearth) ให้ "ข้ามการเติม mitrearth" แทนการ
+    # ล้มทั้ง pipeline — ผลลัพธ์จะได้ผังจาก OSM ล้วน ๆ (ยังใช้งานได้จริง เพียงแต่ยังไม่มีการเติมเส้นที่ OSM
+    # สำรวจไม่ครบ) ผู้ดูแลระบบเพิ่มข้อมูล provincial_gis ของจังหวัดนั้นทีหลังได้ตามที่อธิบายไว้ใน
+    # 02_engine_data/README.md แล้วรัน engine ใหม่อีกครั้งเพื่อให้ได้ผังที่สมบูรณ์ขึ้น
     folder_map = build_province_folder_map(data_raw_dir)
     province_folder = folder_map.get(province_th)
     if province_folder is None:
-        raise ValueError(f"ไม่พบโฟลเดอร์ provincial_gis สำหรับจังหวัด '{province_th}' — ตรวจสอบ "
-                          f"build_province_folder_map() หรือชื่อโฟลเดอร์ provincial_gis/")
-    code_prefix = os.path.basename(province_folder).split("_", 1)[0]
+        print(f"⚠️  ไม่พบโฟลเดอร์ provincial_gis สำหรับจังหวัด '{province_th}' — ข้ามการเติมข้อมูลเสริม mitrearth "
+              f"(ใช้ OSM เป็นแหล่งเดียว ตาม ADR-003 ข้อมูล mitrearth เป็นแค่ส่วนเสริมอยู่แล้ว ไม่ใช่แหล่งหลัก)",
+              file=sys.stderr)
+        empty_geom = gpd.GeoDataFrame({"geometry": []}, geometry="geometry", crs="EPSG:32647")
+        major, minor, body = empty_geom.copy(), empty_geom.copy(), empty_geom.copy()
+    else:
+        code_prefix = os.path.basename(province_folder).split("_", 1)[0]
+        major, minor, body = load_surface_water(province_folder, code_prefix)
 
-    major, minor, body = load_surface_water(province_folder, code_prefix)
     osm_raw = load_osm_waterways(osm_geojson_path)
 
     clip_mask = boundary_buffered.union_all() if hasattr(boundary_buffered, "union_all") \

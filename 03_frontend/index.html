@@ -7,6 +7,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="data/nakhon_pa_mak.js"></script>
+    <script src="thai_admin_divisions.js"></script>
     <style>
         body { font-family: 'Sarabun', sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; background-color: #f0f2f5; }
         #sidebar { width: 340px; background: #fff; padding: 15px; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 10; display: flex; flex-direction: column; overflow-y: auto; }
@@ -40,14 +41,27 @@
     <div id="sidebar">
         <h2 style="font-size: 16px; color: #0056b3; text-align: center; margin-top: 0;">เครื่องมือจัดการผังน้ำ</h2>
 
-        <!-- 1. เลือกตำบล (เพิ่มตามคำขอของ Ton) — เลือกตำบลแล้วสั่งรัน engine ใหม่ได้จากปุ่มนี้เลย
-             ผ่าน public.nw_trigger_engine_run() ซึ่งตรวจรหัสผ่าน manager_tab ก่อน แล้วยิง request ไปที่
-             engine service บน Render (ดู ADR-005) — ต้องใช้รหัสผ่าน manager เท่านั้น (ไม่ใช่ villager_form)
-             เพราะรัน engine หนักและไม่ควรให้ใครก็กดได้ -->
+        <!-- 1. เลือกตำบล (ตาม ADR-005 + คำขอเพิ่มเติมของ Ton 2026-08-30: เลือกได้ทุกตำบลทั่วประเทศ ไม่จำกัด
+             แค่ตำบลที่เตรียมข้อมูลไว้ล่วงหน้า — ถ้าตำบลที่เลือกยังไม่เคยมีผังในระบบ จะขึ้นสถานะ "สร้างใหม่" ให้
+             ตั้งรหัสผ่าน manager แล้วสร้างได้เลย ถ้ามีผังอยู่แล้วจะโหลดมาให้แก้ไข/สั่งรัน engine ใหม่ทับได้ตามเดิม
+             ระบบเลือกจังหวัด/อำเภอ/ตำบล อ่านจาก thai_admin_divisions.js (สกัดจาก THA_Tambon.dbf ที่ bundle
+             ไว้แล้วใน 02_engine_data/admin_boundary — ครบทุกตำบลทั่วประเทศ) ส่วนการเช็คว่า "มีอยู่แล้วหรือไม่"
+             เรียก public.nw_find_tambon_id() ซึ่งตัดคำนำหน้า "ตำบล/อำเภอ" ออกก่อนเทียบเสมอ (ชื่อในตาราง tambons
+             เดิมกับใน THA_Tambon.dbf ใส่คำนำหน้าไม่ตรงกัน) -->
         <div id="tambon-select-section" style="border:1px solid #ddd; border-radius:6px; padding:10px; margin-bottom:12px; background:#f8f9fa;">
             <label style="font-size:12px; font-weight:bold; color:#0056b3; display:block; margin-bottom:6px;">1. เลือกตำบล</label>
-            <select id="tambon-select" style="width:100%; padding:6px; margin-bottom:8px; font-size:13px; box-sizing:border-box;"></select>
-            <div style="font-size:11px; color:#999; margin-bottom:8px;">ข้อมูลจาก engine อัตโนมัติ + แก้ไขต่อโดยชุมชนได้</div>
+            <select id="province-select" style="width:100%; padding:6px; margin-bottom:4px; font-size:13px; box-sizing:border-box;"><option value="">— จังหวัด —</option></select>
+            <select id="amphoe-select" style="width:100%; padding:6px; margin-bottom:4px; font-size:13px; box-sizing:border-box;" disabled><option value="">— อำเภอ —</option></select>
+            <select id="tambon-pick-select" style="width:100%; padding:6px; margin-bottom:8px; font-size:13px; box-sizing:border-box;" disabled><option value="">— ตำบล —</option></select>
+
+            <div id="tambon-status-info" style="font-size:11px; color:#999; margin-bottom:8px;"></div>
+
+            <!-- โชว์เฉพาะตอนเลือกตำบลที่ยังไม่มีผังในระบบ -->
+            <div id="new-tambon-create-box" style="display:none; margin-bottom:8px;">
+                <input id="new-tambon-password" type="password" placeholder="ตั้งรหัสผ่าน manager สำหรับตำบลนี้ (อย่างน้อย 4 ตัวอักษร)" style="width:100%; padding:6px; margin-bottom:6px; font-size:13px; box-sizing:border-box;">
+                <button id="btn-create-tambon" class="tool-btn" style="width:100%; justify-content:center; box-sizing:border-box;" onclick="onCreateNewTambonClick()">✚ สร้างผังน้ำตำบลนี้</button>
+            </div>
+
             <button id="btn-run-engine" class="tool-btn" style="width:100%; justify-content:center; box-sizing:border-box;" onclick="onRunEngineClick()">⚙ รัน Engine ใหม่สำหรับตำบลนี้ (manager)</button>
             <div id="engine-run-status" style="font-size:12px; margin-top:6px; min-height:16px;"></div>
         </div>
@@ -198,20 +212,37 @@
         const SUPABASE_URL = 'https://khfixycxjwxcpayiwxap.supabase.co';
         const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_1Iju7_QORaqhtYE4HryrGQ_KzYGx_1i';
 
-        // รายชื่อตำบลที่ "พร้อมใช้งาน" กับ engine (มีข้อมูลดิบของจังหวัดนั้น bundle ไว้ใน 02_engine_data/ และ
-        // เตรียมไฟล์ OSM waterway ไว้ใน 01_data_external/osm/ ครบแล้ว) — ตอนนี้มีแค่ตำบลเดียว เพิ่มตำบลใหม่ได้
-        // โดยเพิ่ม object ในลิสต์นี้ (ต้อง bundle ข้อมูลให้ครบก่อน ดู 02_engine_service/README.md)
-        const AVAILABLE_TAMBONS = [
-            {
-                tambon_id: '20451bd6-df9d-4214-b2f0-aca23f9f2d91',
-                name_th: 'ตำบลนครป่าหมาก',
-                amphoe_th: 'บางกระทุ่ม',
-                province_th: 'พิษณุโลก',
-                osm_geojson_filename: 'nakhon_pa_mak_osm_waterways.geojson'
-            }
+        // ตำบลบางแห่งมีไฟล์ OSM waterway ที่คัดสรร/ทดสอบไว้ล่วงหน้าแล้ว (ดีกว่าดึงสดจาก Overpass ซ้ำทุกครั้ง) —
+        // จับคู่ด้วยชื่อจังหวัด/อำเภอ/ตำบล (ตัดคำนำหน้าออกก่อนเทียบ เหมือนฝั่ง Supabase/engine) ตำบลอื่นที่ไม่อยู่ใน
+        // นี้จะให้ engine service ดึง OSM สดจาก Overpass API เอง (ดู 01_engine/00_fetch_osm_waterways.py)
+        const CURATED_OSM_OVERRIDES = [
+            { province_th: 'พิษณุโลก', amphoe_th: 'บางกระทุ่ม', tambon_th: 'นครป่าหมาก', osm_geojson_filename: 'nakhon_pa_mak_osm_waterways.geojson' }
         ];
 
-        let TAMBON_ID = AVAILABLE_TAMBONS[0].tambon_id; // เปลี่ยนได้ตอนรันจริงผ่าน dropdown เลือกตำบล
+        function normalizeThaiAdminName(name) {
+            const prefixes = ['ตำบล', 'ต.', 'แขวง', 'อำเภอ', 'อ.', 'เขต'];
+            name = (name || '').trim();
+            for (const p of prefixes) {
+                if (name.startsWith(p)) return name.slice(p.length).trim();
+            }
+            return name;
+        }
+
+        function findCuratedOsmFilename(province_th, amphoe_th, tambon_th) {
+            const np = normalizeThaiAdminName(province_th), na = normalizeThaiAdminName(amphoe_th), nt = normalizeThaiAdminName(tambon_th);
+            const hit = CURATED_OSM_OVERRIDES.find(o => normalizeThaiAdminName(o.province_th) === np
+                && normalizeThaiAdminName(o.amphoe_th) === na && normalizeThaiAdminName(o.tambon_th) === nt);
+            return hit ? hit.osm_geojson_filename : null;
+        }
+
+        // ตำบลที่โหลดตอนเปิดหน้าเว็บครั้งแรก (ก่อนผู้ใช้เลือกอะไรเอง) — เดิมทีเป็นตำบลนำร่องเดียวที่ระบบมี
+        const DEFAULT_TAMBON = { tambon_id: '20451bd6-df9d-4214-b2f0-aca23f9f2d91', province_th: 'พิษณุโลก', amphoe_th: 'บางกระทุ่ม', tambon_th: 'นครป่าหมาก' };
+
+        let TAMBON_ID = DEFAULT_TAMBON.tambon_id; // เปลี่ยนได้ตอนรันจริงผ่านตัวเลือกจังหวัด/อำเภอ/ตำบล
+        // สถานะตำบลที่กำลังเลือกอยู่ตอนนี้ (province_th/amphoe_th/tambon_th เสมอ, tambon_id เป็น null ถ้ายังไม่มี
+        // ผังในระบบ — สถานะ "ตำบลใหม่ ยังไม่เคยสร้าง")
+        let CURRENT_TAMBON = { ...DEFAULT_TAMBON };
+        let THAI_ADMIN_TREE = null; // {province: {amphoe: [tambon, ...]}} โหลดจาก thai_admin_divisions.json
         const ENGINE_RUN_POLL_MS = 5000;
         const ENGINE_RUN_TIMEOUT_MS = 10 * 60 * 1000; // 10 นาที กันรอค้างตลอดไปถ้า engine ล้มเหลวเงียบๆ
 
@@ -252,35 +283,154 @@
             }
         }
 
-        // ===== UI เลือกตำบล + สั่งรัน engine ใหม่ (Phase 6, ADR-005) =====
-        function populateTambonSelect() {
-            const sel = document.getElementById('tambon-select');
-            if (!sel) return;
-            sel.innerHTML = '';
-            AVAILABLE_TAMBONS.forEach(t => {
-                const opt = document.createElement('option');
-                opt.value = t.tambon_id;
-                opt.textContent = t.name_th + ' (' + t.amphoe_th + ', ' + t.province_th + ')';
-                sel.appendChild(opt);
-            });
-            sel.value = TAMBON_ID;
+        // ===== UI เลือกตำบล (จังหวัด -> อำเภอ -> ตำบล ครบทุกตำบลทั่วประเทศ) + สร้าง/แก้ไข/สั่งรัน engine =====
+        async function loadThaiAdminTree() {
+            // โหลดผ่าน <script src="thai_admin_divisions.js"> (ตัวแปร global THAI_ADMIN_DIVISIONS) ไม่ใช้ fetch()
+            // เพราะหน้านี้เปิดแบบ file:// โดยตรง ซึ่ง fetch ไฟล์ local ในเบราว์เซอร์ส่วนใหญ่ติด CORS (opaque origin)
+            if (THAI_ADMIN_TREE) return THAI_ADMIN_TREE;
+            THAI_ADMIN_TREE = (typeof THAI_ADMIN_DIVISIONS !== 'undefined') ? THAI_ADMIN_DIVISIONS : {};
+            return THAI_ADMIN_TREE;
         }
 
-        async function onTambonSelectChange(e) {
-            TAMBON_ID = e.target.value;
-            const statusEl = document.getElementById('engine-run-status');
-            statusEl.style.color = '#666';
-            statusEl.textContent = 'กำลังโหลดผังของตำบลนี้...';
-            const els = await loadElementsFromSupabase(TAMBON_ID);
-            if (els && cy) {
-                cy.elements().remove();
-                cy.add(els);
-                cy.layout({ name: 'preset' }).run();
-                statusEl.textContent = '';
-            } else {
-                statusEl.style.color = '#dc3545';
-                statusEl.textContent = 'ยังไม่มีผังของตำบลนี้ใน Supabase';
+        function fillSelect(sel, values, placeholder) {
+            sel.innerHTML = '<option value="">' + placeholder + '</option>';
+            values.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v; opt.textContent = v;
+                sel.appendChild(opt);
+            });
+        }
+
+        async function populateProvinceSelect() {
+            const tree = await loadThaiAdminTree();
+            const provinceSel = document.getElementById('province-select');
+            const provinces = Object.keys(tree).sort((a, b) => a.localeCompare(b, 'th'));
+            fillSelect(provinceSel, provinces, '— จังหวัด —');
+        }
+
+        async function onProvinceSelectChange() {
+            const tree = await loadThaiAdminTree();
+            const provinceSel = document.getElementById('province-select');
+            const amphoeSel = document.getElementById('amphoe-select');
+            const tambonSel = document.getElementById('tambon-pick-select');
+            const province = provinceSel.value;
+            if (!province) {
+                fillSelect(amphoeSel, [], '— อำเภอ —'); amphoeSel.disabled = true;
+                fillSelect(tambonSel, [], '— ตำบล —'); tambonSel.disabled = true;
+                return;
             }
+            const amphoes = Object.keys(tree[province]).sort((a, b) => a.localeCompare(b, 'th'));
+            fillSelect(amphoeSel, amphoes, '— อำเภอ —'); amphoeSel.disabled = false;
+            fillSelect(tambonSel, [], '— ตำบล —'); tambonSel.disabled = true;
+            document.getElementById('tambon-status-info').textContent = '';
+            document.getElementById('new-tambon-create-box').style.display = 'none';
+        }
+
+        async function onAmphoeSelectChange() {
+            const tree = await loadThaiAdminTree();
+            const province = document.getElementById('province-select').value;
+            const amphoeSel = document.getElementById('amphoe-select');
+            const tambonSel = document.getElementById('tambon-pick-select');
+            const amphoe = amphoeSel.value;
+            if (!amphoe) { fillSelect(tambonSel, [], '— ตำบล —'); tambonSel.disabled = true; return; }
+            const tambons = (tree[province][amphoe] || []).slice().sort((a, b) => a.localeCompare(b, 'th'));
+            fillSelect(tambonSel, tambons, '— ตำบล —'); tambonSel.disabled = false;
+            document.getElementById('tambon-status-info').textContent = '';
+            document.getElementById('new-tambon-create-box').style.display = 'none';
+        }
+
+        async function onTambonPickSelectChange() {
+            const province_th = document.getElementById('province-select').value;
+            const amphoe_th = document.getElementById('amphoe-select').value;
+            const tambon_th = document.getElementById('tambon-pick-select').value;
+            const statusEl = document.getElementById('tambon-status-info');
+            const createBox = document.getElementById('new-tambon-create-box');
+            const runBtn = document.getElementById('btn-run-engine');
+            if (!tambon_th) { createBox.style.display = 'none'; return; }
+
+            CURRENT_TAMBON = { tambon_id: null, province_th, amphoe_th, tambon_th };
+            statusEl.style.color = '#666';
+            statusEl.textContent = 'กำลังตรวจสอบว่ามีผังของตำบลนี้อยู่แล้วหรือยัง...';
+            createBox.style.display = 'none';
+            runBtn.style.display = '';
+
+            if (!supabaseClient) { statusEl.style.color = '#dc3545'; statusEl.textContent = 'ยังไม่ได้เชื่อมต่อ Supabase'; return; }
+
+            const { data: foundId, error } = await supabaseClient.rpc('nw_find_tambon_id', {
+                p_province_th: province_th, p_amphoe_th: amphoe_th, p_tambon_th: tambon_th
+            });
+
+            if (error) {
+                statusEl.style.color = '#dc3545';
+                statusEl.textContent = 'ตรวจสอบไม่สำเร็จ: ' + error.message;
+                return;
+            }
+
+            if (foundId) {
+                // ตำบลนี้มีอยู่แล้วในระบบ — โหลดผังมาแสดง (มีหรือยังไม่มีผัง diagram ก็ได้ แค่มีแถวตำบลแล้ว)
+                CURRENT_TAMBON.tambon_id = foundId;
+                TAMBON_ID = foundId;
+                statusEl.style.color = '#666';
+                statusEl.textContent = 'กำลังโหลดผังของตำบลนี้...';
+                const els = await loadElementsFromSupabase(foundId);
+                if (els && cy) {
+                    cy.elements().remove();
+                    cy.add(els);
+                    cy.layout({ name: 'preset' }).run();
+                    statusEl.textContent = 'มีผังของตำบลนี้อยู่แล้ว (' + els.length + ' element) — แก้ไขต่อได้เลย หรือกด "รัน Engine ใหม่" เพื่อสร้างทับด้วยข้อมูลล่าสุด';
+                } else if (cy) {
+                    cy.elements().remove();
+                    statusEl.textContent = 'ตำบลนี้มีอยู่ในระบบแล้วแต่ยังไม่เคยรัน engine สร้างผัง — กด "รัน Engine ใหม่" ด้านล่างเพื่อสร้างผังแรกได้เลย';
+                }
+            } else {
+                // ยังไม่มีตำบลนี้ในระบบเลย — ให้ตั้งรหัสผ่านแล้วสร้างใหม่
+                statusEl.style.color = '#856404';
+                statusEl.textContent = 'ยังไม่มีผังของตำบลนี้ในระบบ — ตั้งรหัสผ่าน manager สำหรับตำบลนี้แล้วกด "สร้างผังน้ำตำบลนี้" ได้เลย';
+                createBox.style.display = '';
+                runBtn.style.display = 'none';
+                if (cy) cy.elements().remove();
+            }
+        }
+
+        async function onCreateNewTambonClick() {
+            const statusEl = document.getElementById('tambon-status-info');
+            const createBtn = document.getElementById('btn-create-tambon');
+            const password = document.getElementById('new-tambon-password').value;
+            if (!password || password.length < 4) {
+                statusEl.style.color = '#dc3545';
+                statusEl.textContent = 'ตั้งรหัสผ่านอย่างน้อย 4 ตัวอักษร';
+                return;
+            }
+            if (!supabaseClient) { statusEl.style.color = '#dc3545'; statusEl.textContent = 'ยังไม่ได้เชื่อมต่อ Supabase'; return; }
+
+            createBtn.disabled = true;
+            statusEl.style.color = '#856404';
+            statusEl.textContent = 'กำลังสร้างตำบลใหม่ในระบบ...';
+
+            const { data, error } = await supabaseClient.rpc('nw_register_new_tambon', {
+                p_province_th: CURRENT_TAMBON.province_th,
+                p_amphoe_th: CURRENT_TAMBON.amphoe_th,
+                p_tambon_th: CURRENT_TAMBON.tambon_th,
+                p_manager_password: password
+            });
+
+            if (error || !data || data.success !== true) {
+                statusEl.style.color = '#dc3545';
+                statusEl.textContent = 'สร้างไม่สำเร็จ: ' + ((data && data.error) || (error && error.message) || 'ไม่ทราบสาเหตุ');
+                createBtn.disabled = false;
+                return;
+            }
+
+            CURRENT_TAMBON.tambon_id = data.tambon_id;
+            TAMBON_ID = data.tambon_id;
+            document.getElementById('new-tambon-create-box').style.display = 'none';
+            document.getElementById('btn-run-engine').style.display = '';
+            statusEl.style.color = '#28a745';
+            statusEl.textContent = 'สร้างตำบลในระบบแล้ว — กำลังสั่งรัน engine ครั้งแรกให้อัตโนมัติ...';
+
+            // สั่งรัน engine ทันทีด้วยรหัสผ่านเดียวกับที่เพิ่งตั้ง (ไม่ต้องให้พิมพ์ซ้ำ)
+            await runEngineForCurrentTambon(password);
+            createBtn.disabled = false;
         }
 
         function pollEngineRunResult(tambonId, beforeVersionId, statusEl, btn) {
@@ -318,18 +468,11 @@
             }, ENGINE_RUN_POLL_MS);
         }
 
-        async function onRunEngineClick() {
+        // ยิงคำสั่งรัน engine จริง (ใช้ร่วมกันทั้งปุ่ม "รัน Engine ใหม่" ปกติ และตอนสร้างตำบลใหม่เสร็จแล้วรันต่อทันที)
+        async function runEngineForCurrentTambon(password) {
             const statusEl = document.getElementById('engine-run-status');
             const btn = document.getElementById('btn-run-engine');
-            const sel = document.getElementById('tambon-select');
-            const tambon = AVAILABLE_TAMBONS.find(t => t.tambon_id === sel.value);
-            if (!tambon) return;
-
-            const password = prompt('กรอกรหัสผ่าน manager เพื่อยืนยันการรัน engine ใหม่สำหรับ "' + tambon.name_th + '"\n\n' +
-                '(จะสร้างผังเวอร์ชันใหม่ทับผังปัจจุบัน — ผังเดิมยังถูกเก็บไว้เป็นประวัติ ไม่หายไปไหน)');
-            if (!password) return;
-
-            if (!supabaseClient) { statusEl.style.color = '#dc3545'; statusEl.textContent = 'ยังไม่ได้เชื่อมต่อ Supabase'; return; }
+            const tambon = CURRENT_TAMBON;
 
             btn.disabled = true;
             statusEl.style.color = '#856404';
@@ -343,13 +486,14 @@
                     .maybeSingle();
                 const beforeVersionId = beforeMeta ? beforeMeta.version_id : null;
 
+                const osmOverride = findCuratedOsmFilename(tambon.province_th, tambon.amphoe_th, tambon.tambon_th);
                 const { data, error } = await supabaseClient.rpc('nw_trigger_engine_run', {
                     p_tambon_id: tambon.tambon_id,
                     p_manager_password: password,
                     p_province_th: tambon.province_th,
                     p_amphoe_th: tambon.amphoe_th,
-                    p_tambon_th: tambon.name_th,
-                    p_osm_geojson_filename: tambon.osm_geojson_filename
+                    p_tambon_th: tambon.tambon_th,
+                    p_osm_geojson_filename: osmOverride
                 });
 
                 if (error || !data || data.success !== true) {
@@ -360,7 +504,8 @@
                 }
 
                 statusEl.style.color = '#856404';
-                statusEl.textContent = 'ส่งคำสั่งแล้ว กำลังรอ engine ประมวลผล (อาจใช้เวลา 30 วินาทีถึงหลายนาที ถ้า Render sleep อยู่)...';
+                statusEl.textContent = 'ส่งคำสั่งแล้ว กำลังรอ engine ประมวลผล (ตำบลใหม่ที่ต้องดึง OSM สดจาก Overpass '
+                    + 'อาจใช้เวลานานกว่าปกติ รวมถึง 30 วินาทีถึงหลายนาทีถ้า Render sleep อยู่)...';
                 pollEngineRunResult(tambon.tambon_id, beforeVersionId, statusEl, btn);
             } catch (e) {
                 statusEl.style.color = '#dc3545';
@@ -369,10 +514,41 @@
             }
         }
 
-        function setupTambonUI() {
-            populateTambonSelect();
-            const sel = document.getElementById('tambon-select');
-            if (sel) sel.addEventListener('change', onTambonSelectChange);
+        async function onRunEngineClick() {
+            const statusEl = document.getElementById('engine-run-status');
+            if (!CURRENT_TAMBON || !CURRENT_TAMBON.tambon_id) {
+                statusEl.style.color = '#dc3545';
+                statusEl.textContent = 'เลือกตำบลก่อน (หรือถ้าเป็นตำบลใหม่ ต้องกด "สร้างผังน้ำตำบลนี้" ก่อน)';
+                return;
+            }
+            const password = prompt('กรอกรหัสผ่าน manager เพื่อยืนยันการรัน engine ใหม่สำหรับ "' + CURRENT_TAMBON.tambon_th + '"\n\n' +
+                '(จะสร้างผังเวอร์ชันใหม่ทับผังปัจจุบัน — ผังเดิมยังถูกเก็บไว้เป็นประวัติ ไม่หายไปไหน)');
+            if (!password) return;
+            if (!supabaseClient) { statusEl.style.color = '#dc3545'; statusEl.textContent = 'ยังไม่ได้เชื่อมต่อ Supabase'; return; }
+            await runEngineForCurrentTambon(password);
+        }
+
+        async function setupTambonUI() {
+            await populateProvinceSelect();
+            document.getElementById('province-select').addEventListener('change', onProvinceSelectChange);
+            document.getElementById('amphoe-select').addEventListener('change', onAmphoeSelectChange);
+            document.getElementById('tambon-pick-select').addEventListener('change', onTambonPickSelectChange);
+
+            // เลือกตำบลเริ่มต้น (นครป่าหมาก) ให้ตรงกับผังที่แสดงอยู่แล้วตอนเปิดหน้าเว็บ
+            const tree = await loadThaiAdminTree();
+            const provinceSel = document.getElementById('province-select');
+            if (tree[DEFAULT_TAMBON.province_th]) {
+                provinceSel.value = DEFAULT_TAMBON.province_th;
+                await onProvinceSelectChange();
+                const amphoeSel = document.getElementById('amphoe-select');
+                amphoeSel.value = DEFAULT_TAMBON.amphoe_th;
+                await onAmphoeSelectChange();
+                const tambonSel = document.getElementById('tambon-pick-select');
+                tambonSel.value = DEFAULT_TAMBON.tambon_th;
+                // ไม่ต้องเรียก onTambonPickSelectChange() — ผังเริ่มต้นโหลดผ่าน initApp()/loadElementsFromSupabase()
+                // อยู่แล้วตอนเปิดหน้าเว็บ แค่ให้ dropdown แสดงค่าตรงกันเฉย ๆ
+                CURRENT_TAMBON = { ...DEFAULT_TAMBON, tambon_id: DEFAULT_TAMBON.tambon_id };
+            }
         }
 
         let cy; // สร้างจริงใน initApp() ด้านล่าง (ต้องรอผลโหลดจาก Supabase ก่อน ถึงจะรู้ว่าจะใช้ elements ชุดไหน)

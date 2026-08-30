@@ -31,6 +31,7 @@ import sys
 import tempfile
 import unicodedata
 from pathlib import Path
+from typing import Optional
 
 import requests
 from fastapi import FastAPI, Header, HTTPException
@@ -53,7 +54,10 @@ class RunEngineRequest(BaseModel):
     province_th: str
     amphoe_th: str
     tambon_th: str
-    osm_geojson_filename: str
+    # ทางเลือก (2026-08-30): ถ้าระบุมาและมีไฟล์นี้เตรียมไว้จริง (เตรียมมือ/คัดสรรไว้ล่วงหน้า) จะใช้ไฟล์นี้ตรง ๆ
+    # ถ้าไม่ระบุ หรือไฟล์ไม่มีอยู่จริง จะดึงสดจาก Overpass API แทน (ดู 00_fetch_osm_waterways.py) — ทำให้
+    # ตำบลที่ไม่เคยเตรียมข้อมูลไว้ล่วงหน้าเลยก็ยังสร้างผังได้จากหน้าเว็บโดยตรง (ถ้า Render เรียก Overpass ได้จริง)
+    osm_geojson_filename: Optional[str] = None
     label: str = "เรียกใช้งานผ่าน engine service (Render)"
     entered_by: str = "engine-service"
 
@@ -132,13 +136,9 @@ def run_engine(req: RunEngineRequest, x_engine_secret: str = Header(default=""))
     if not SUPABASE_URL or not SUPABASE_SERVICE_ROLE_KEY:
         raise HTTPException(status_code=500, detail="ยังไม่ได้ตั้งค่า SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY")
 
-    osm_path = OSM_DIR / req.osm_geojson_filename
-    if not osm_path.exists():
-        raise HTTPException(
-            status_code=400,
-            detail=f"ยังไม่มีไฟล์ OSM สำหรับตำบลนี้ ({osm_path.name}) — ต้องเตรียมไฟล์ OSM waterway GeoJSON "
-                   f"ไว้ล่วงหน้าที่ 01_data_external/osm/ ก่อน (ดูคำอธิบายข้อจำกัดใน 01_data_ingestion.py)",
-        )
+    osm_path = OSM_DIR / req.osm_geojson_filename if req.osm_geojson_filename else None
+    if osm_path is not None and not osm_path.exists():
+        osm_path = None  # ไฟล์ที่ระบุมาไม่มีจริง — ลองดึงสดแทนด้านล่าง เหมือนไม่ได้ระบุมา
 
     with tempfile.TemporaryDirectory(prefix="engine_run_") as tmp:
         tmp = Path(tmp)
@@ -146,6 +146,27 @@ def run_engine(req: RunEngineRequest, x_engine_secret: str = Header(default=""))
         phase2_dir = tmp / "phase2"
         phase3_dir = tmp / "phase3"
         out_js = tmp / "output.js"
+
+        if osm_path is None:
+            # ไม่มีไฟล์ OSM เตรียมไว้ล่วงหน้า — ดึงสดจาก Overpass API (ตำบลใหม่ที่เลือกจากหน้าเว็บโดยตรง)
+            fetched_osm_path = tmp / "osm_waterways_fetched.geojson"
+            try:
+                _run_step([
+                    str(ENGINE_DIR / "00_fetch_osm_waterways.py"),
+                    "--data-raw-dir", str(DATA_RAW_DIR),
+                    "--province", req.province_th,
+                    "--amphoe", req.amphoe_th,
+                    "--tambon", req.tambon_th,
+                    "--out-geojson", str(fetched_osm_path),
+                ], cwd=ENGINE_DIR)
+            except HTTPException as e:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"ดึงข้อมูล OSM สดจาก Overpass API ไม่สำเร็จ สำหรับตำบล '{req.tambon_th}' "
+                           f"({e.detail}) — ต้องให้ทีมพัฒนาเตรียมไฟล์ OSM waterway GeoJSON ให้ด้วยมือแทน "
+                           f"(ผ่านเบราว์เซอร์จริงที่มีอินเทอร์เน็ต) แล้วค่อยลองใหม่",
+                )
+            osm_path = fetched_osm_path
 
         _run_step([
             str(ENGINE_DIR / "01_data_ingestion.py"),
