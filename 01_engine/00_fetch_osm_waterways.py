@@ -69,7 +69,7 @@ def get_tambon_bbox_wgs84(data_raw_dir: str, province_th: str, amphoe_th: str, t
         raise ValueError(f"ไม่พบตำบล '{tambon_th}' อำเภอ '{amphoe_th}' จังหวัด '{province_th}' ใน THA_Tambon.shp "
                           f"— ตรวจสอบว่าสะกดชื่อตรงกับที่อยู่ในชุดข้อมูลขอบเขตทางการหรือไม่")
     geom = match.iloc[0].geometry
-    boundary = gpd.GeoSeries([geom], crs=gdf.crs).buffer(buffer_m)
+    boundary = gpd.GeoSeries([geom], crs=match.crs).buffer(buffer_m)
     minx, miny, maxx, maxy = boundary.to_crs("EPSG:4326").total_bounds
     return miny, minx, maxy, maxx  # south, west, north, east
 
