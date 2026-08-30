@@ -41,7 +41,21 @@ _urllib3_cn.allowed_gai_family = _allowed_gai_family_ipv4_only
 OVERPASS_ENDPOINTS = [
     "https://overpass-api.de/api/interpreter",
     "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.openstreetmap.fr/api/interpreter",
+    "https://lambert.openstreetmap.de/api/interpreter",
 ]
+
+# Overpass API "acceptable usage" policy ขอให้ทุก request ใส่ User-Agent ที่ระบุตัวตนแอปชัดเจน
+# (ไม่ใช่ default "python-requests/x.x" ที่ระบบตรวจจับการ scrape มักบล็อกทันที) — อ้างอิงจากการค้นคว้า
+# บน OSM Community Forum ("Overpass API will block Azure and AWS for some time",
+# "Blocked IP on overpass-api.de from production server") ซึ่งยืนยันว่า Overpass API operator บล็อก
+# IP ของ cloud hosting provider (พบกรณี Azure, AWS, และแม้แต่ DigitalOcean) เป็นมาตรการกันการ scrape
+# หนัก ๆ จาก IP เดิมซ้ำ ๆ — Render อาจโดนบล็อกลักษณะเดียวกัน การใส่ User-Agent ที่ถูกต้องช่วยลดโอกาส
+# โดนบล็อกจากระบบตรวจจับอัตโนมัติ (แต่ถ้า IP ของ Render ติด blocklist แบบเจาะจงอยู่แล้ว ก็อาจไม่ช่วย)
+OVERPASS_USER_AGENT = (
+    "WaterDiagramTH/1.0 (Thai community water-network diagramming tool; "
+    "https://github.com/mpdox30/water-diagram; contact via GitHub issues)"
+)
 
 WATERWAY_TAGS = ["river", "canal", "stream", "drain"]
 
@@ -102,10 +116,11 @@ def build_overpass_query(bbox):
 
 def fetch_overpass(query: str):
     errors = []
+    headers = {"User-Agent": OVERPASS_USER_AGENT}
     for endpoint in OVERPASS_ENDPOINTS:
         resp = None
         try:
-            resp = requests.post(endpoint, data={"data": query}, timeout=90)
+            resp = requests.post(endpoint, data={"data": query}, headers=headers, timeout=90)
             resp.raise_for_status()
             return resp.json()
         except Exception as e:  # noqa: BLE001 — ตั้งใจดักทุก error เพื่อลอง endpoint ถัดไป
