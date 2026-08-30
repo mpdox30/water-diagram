@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Architecture Diagram - Automated Water Network System</title>
+    <style>
+        body {
+            font-family: 'Sarabun', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f7f6;
+        }
+        h1, p {
+            text-align: center;
+        }
+        h1 {
+            color: #0056b3;
+            border-bottom: 2px solid #0056b3;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .diagram-container {
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+        .mermaid {
+            display: flex;
+            justify-content: center;
+        }
+    </style>
+    <!-- นำเข้าไลบรารี Mermaid.js สำหรับวาดผัง -->
+    <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+    <script>
+        mermaid.initialize({ startOnLoad: true, theme: 'default' });
+    </script>
+</head>
+<body>
+
+    <h1>ผังสถาปัตยกรรมระบบแปลงผังน้ำกึ่งอัตโนมัติ</h1>
+    <p>สถาปัตยกรรมการเชื่อมโยงข้อมูลระหว่างส่วนหน้า (Frontend) ส่วนประมวลผล (Backend) และฐานข้อมูล (Database)</p>
+
+    <div class="diagram-container">
+        <!-- เขียนโครงสร้างผังด้วยไวยากรณ์ของ Mermaid -->
+        <div class="mermaid">
+            graph TD
+                %% กำหนดคลาสสำหรับตกแต่งสี
+                classDef frontend fill:#d4edda,stroke:#28a745,stroke-width:2px;
+                classDef backend fill:#cce5ff,stroke:#007bff,stroke-width:2px;
+                classDef engine fill:#fff3cd,stroke:#ffc107,stroke-width:2px;
+                classDef database fill:#f8d7da,stroke:#dc3545,stroke-width:2px;
+                classDef user fill:#e2e3e5,stroke:#6c757d,stroke-width:2px;
+
+                User((ชุมชน /<br>ผู้ใช้งาน)):::user
+
+                subgraph "1. Frontend Layer (React.js / React Flow)"
+                    UI_Canvas[Interactive Canvas<br>แสดงผังแบบ Orthogonal]:::frontend
+                    UI_Map[Reference Map<br>แผนที่ภูมิศาสตร์อ้างอิง]:::frontend
+                    UI_Tools[Community Toolset<br>เครื่องมือลากวางสัญลักษณ์ ปตร./ฝาย]:::frontend
+                    UI_Import[Data Importer<br>รับไฟล์ CSV/GeoJSON]:::frontend
+                    
+                    UI_Map -.->|เทียบเคียงพิกัด| UI_Canvas
+                    UI_Tools --> UI_Canvas
+                    UI_Import --> UI_Canvas
+                end
+
+                subgraph "2. Backend API Layer (FastAPI)"
+                    API_Gateway{API Gateway /<br>Request Router}:::backend
+                end
+
+                subgraph "3. Spatial & Topology Engine (Python)"
+                    Eng_Ingest[Data Parsing Module<br>แปลงข้อมูลนำเข้า]:::engine
+                    Eng_Snap[Spatial Snapping<br>ตรึงจุดโครงสร้างเข้ากับลำน้ำ]:::engine
+                    Eng_Flow[Flow Routing<br>วิเคราะห์ทิศทางน้ำจาก DEM]:::engine
+                    Eng_Graph[Network Graph Extractor<br>สร้าง Node และ Edge]:::engine
+                    Eng_Layout[Schematic Layout Algorithm<br>ดัดเส้นเป็นผังอัตโนมัติ]:::engine
+                    
+                    Eng_Ingest --> Eng_Snap
+                    Eng_Snap --> Eng_Flow
+                    Eng_Flow --> Eng_Graph
+                    Eng_Graph --> Eng_Layout
+                end
+
+                subgraph "4. Database & External Data Layer"
+                    DB_GIS[(PostgreSQL + PostGIS<br>ขอบเขตตำบล & บันทึกผังน้ำ)]:::database
+                    Ext_OSM([OpenStreetMap / HydroRIVERS<br>ข้อมูลเส้นน้ำตั้งต้น]):::database
+                    Ext_DEM([Copernicus / SRTM DEM<br>ข้อมูลระดับความสูง]):::database
+                end
+
+                %% ความสัมพันธ์ระหว่าง User และระบบ
+                User <-->|คลิก / ลากวาง / ยืนยัน| UI_Canvas
+                User -->|อัปโหลดไฟล์| UI_Import
+
+                %% ความสัมพันธ์ระหว่าง Frontend และ Backend
+                UI_Canvas <-->|ดึงข้อมูล JSON / บันทึกผล| API_Gateway
+                UI_Import -->|ส่งข้อมูลดิบ| API_Gateway
+
+                %% ความสัมพันธ์ระหว่าง Backend และ Engine
+                API_Gateway <-->|สั่งประมวลผล / รับผังน้ำที่ดัดเส้นแล้ว| Eng_Layout
+                API_Gateway -->|ส่งคำสั่งเริ่มงาน| Eng_Ingest
+
+                %% ความสัมพันธ์ระหว่าง Engine และ Database
+                Eng_Snap <-->|ดึงข้อมูลขอบเขต GIS| DB_GIS
+                Eng_Snap <-->|ดึงเส้นน้ำต้นทาง| Ext_OSM
+                Eng_Flow <-->|ดึงค่าความสูงเพื่อคำนวณ Flow| Ext_DEM
+
+        </div>
+    </div>
+
+</body>
+</html>

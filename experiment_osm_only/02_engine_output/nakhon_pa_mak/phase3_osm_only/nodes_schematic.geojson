@@ -1,0 +1,25 @@
+{
+"type": "FeatureCollection",
+"name": "nodes_schematic",
+"crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::32647" } },
+"features": [
+{ "type": "Feature", "properties": { "node_id": 0, "degree": 1, "schematic_x": 643201.90380276414, "schematic_y": 1839035.5149300988 }, "geometry": { "type": "Point", "coordinates": [ 643201.903802764136344, 1839035.514930098783225 ] } },
+{ "type": "Feature", "properties": { "node_id": 2, "degree": 1, "schematic_x": 644736.99187866563, "schematic_y": 1822149.5460951813 }, "geometry": { "type": "Point", "coordinates": [ 644736.991878665634431, 1822149.546095181256533 ] } },
+{ "type": "Feature", "properties": { "node_id": 3, "degree": 3, "schematic_x": 644736.99187866563, "schematic_y": 1831360.0745505909 }, "geometry": { "type": "Point", "coordinates": [ 644736.991878665634431, 1831360.074550590943545 ] } },
+{ "type": "Feature", "properties": { "node_id": 4, "degree": 3, "schematic_x": 643201.90380276414, "schematic_y": 1831360.0745505909 }, "geometry": { "type": "Point", "coordinates": [ 643201.903802764136344, 1831360.074550590943545 ] } },
+{ "type": "Feature", "properties": { "node_id": 6, "degree": 9, "schematic_x": 640131.72765096091, "schematic_y": 1832895.1626264923 }, "geometry": { "type": "Point", "coordinates": [ 640131.72765096090734, 1832895.162626492325217 ] } },
+{ "type": "Feature", "properties": { "node_id": 7, "degree": 3, "schematic_x": 638596.63957505929, "schematic_y": 1831360.0745505909 }, "geometry": { "type": "Point", "coordinates": [ 638596.639575059292838, 1831360.074550590943545 ] } },
+{ "type": "Feature", "properties": { "node_id": 8, "degree": 1, "schematic_x": 638596.63957505929, "schematic_y": 1829824.9864746893 }, "geometry": { "type": "Point", "coordinates": [ 638596.639575059292838, 1829824.986474689329043 ] } },
+{ "type": "Feature", "properties": { "node_id": 10, "degree": 5, "schematic_x": 644736.99187866563, "schematic_y": 1834430.2507023939 }, "geometry": { "type": "Point", "coordinates": [ 644736.991878665634431, 1834430.250702393939719 ] } },
+{ "type": "Feature", "properties": { "node_id": 19, "degree": 1, "schematic_x": 646272.07995456725, "schematic_y": 1839035.5149300988 }, "geometry": { "type": "Point", "coordinates": [ 646272.079954567248933, 1839035.514930098783225 ] } },
+{ "type": "Feature", "properties": { "node_id": 20, "degree": 5, "schematic_x": 644736.99187866563, "schematic_y": 1839035.5149300988 }, "geometry": { "type": "Point", "coordinates": [ 644736.991878665634431, 1839035.514930098783225 ] } },
+{ "type": "Feature", "properties": { "node_id": 21, "degree": 1, "schematic_x": 641666.81572686252, "schematic_y": 1837500.4268541972 }, "geometry": { "type": "Point", "coordinates": [ 641666.815726862521842, 1837500.426854197168723 ] } },
+{ "type": "Feature", "properties": { "node_id": 22, "degree": 3, "schematic_x": 641666.81572686252, "schematic_y": 1839035.5149300988 }, "geometry": { "type": "Point", "coordinates": [ 641666.815726862521842, 1839035.514930098783225 ] } },
+{ "type": "Feature", "properties": { "node_id": 23, "degree": 1, "schematic_x": 641666.81572686252, "schematic_y": 1840570.6030060004 }, "geometry": { "type": "Point", "coordinates": [ 641666.815726862521842, 1840570.603006000397727 ] } },
+{ "type": "Feature", "properties": { "node_id": 24, "degree": 3, "schematic_x": 643201.90380276414, "schematic_y": 1839035.5149300988 }, "geometry": { "type": "Point", "coordinates": [ 643201.903802764136344, 1839035.514930098783225 ] } },
+{ "type": "Feature", "properties": { "node_id": 27, "degree": 1, "schematic_x": 643201.90380276414, "schematic_y": 1840570.6030060004 }, "geometry": { "type": "Point", "coordinates": [ 643201.903802764136344, 1840570.603006000397727 ] } },
+{ "type": "Feature", "properties": { "node_id": 28, "degree": 3, "schematic_x": 640131.72765096091, "schematic_y": 1831360.0745505909 }, "geometry": { "type": "Point", "coordinates": [ 640131.72765096090734, 1831360.074550590943545 ] } },
+{ "type": "Feature", "properties": { "node_id": 31, "degree": 1, "schematic_x": 640131.72765096091, "schematic_y": 1835965.3387782956 }, "geometry": { "type": "Point", "coordinates": [ 640131.72765096090734, 1835965.338778295554221 ] } },
+{ "type": "Feature", "properties": { "node_id": 32, "degree": 1, "schematic_x": 644736.99187866563, "schematic_y": 1839035.5149300988 }, "geometry": { "type": "Point", "coordinates": [ 644736.991878665634431, 1839035.514930098783225 ] } }
+]
+}

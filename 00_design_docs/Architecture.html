@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automated Water Network Generation System</title>
+    <style>
+        body {
+            font-family: 'Sarabun', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f9f9f9;
+        }
+        h1, h2, h3 {
+            color: #0056b3;
+        }
+        h1 {
+            text-align: center;
+            border-bottom: 2px solid #0056b3;
+            padding-bottom: 10px;
+        }
+        .section {
+            background: #fff;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        th {
+            background-color: #0056b3;
+            color: white;
+        }
+        ul, ol {
+            margin-left: 20px;
+        }
+        .highlight {
+            font-weight: bold;
+            color: #d9534f;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>สถาปัตยกรรมและกระบวนการระบบแปลงผังน้ำกึ่งอัตโนมัติ</h1>
+
+    <div class="section">
+        <h2>1. สถาปัตยกรรมของระบบ (System Architecture)</h2>
+        <p>การออกแบบนี้รองรับการประมวลผลเชิงพื้นที่ (Spatial Informatics) อย่างเป็นระบบ เพื่อให้สามารถนำผลลัพธ์ไปเชื่อมต่อกับ Interactive Dashboard หรือใช้ในงานวิจัยการจัดการน้ำชุมชนได้อย่างมีประสิทธิภาพ</p>
+        <table>
+            <tr>
+                <th>องค์ประกอบ (Component)</th>
+                <th>เทคโนโลยีที่แนะนำ (Technology Stack)</th>
+                <th>หน้าที่หลัก (Core Functions)</th>
+            </tr>
+            <tr>
+                <td><strong>1. Frontend (Interactive Dashboard)</strong></td>
+                <td>React.js / Next.js ร่วมกับ React Flow</td>
+                <td>แสดงผลแบบ Dual-view (แผนที่ภูมิศาสตร์ คู่กับ ผังโครงข่าย) รองรับการลากวาง (Drag & Drop) และแก้ไขทิศทางน้ำโดยชุมชน</td>
+            </tr>
+            <tr>
+                <td><strong>2. Backend & API</strong></td>
+                <td>Python (FastAPI)</td>
+                <td>รับคำสั่งจากผู้ใช้ จัดการไฟล์นำเข้า (CSV/GeoJSON) และเรียกใช้อัลกอริทึมประมวลผล GIS</td>
+            </tr>
+            <tr>
+                <td><strong>3. Spatial & Topology Engine</strong></td>
+                <td>GeoPandas, PySheds, NetworkX</td>
+                <td>คำนวณ DEM เพื่อหา Flow Direction, Snap จุดพิกัดโครงสร้างเข้ากับเส้นน้ำ, แปลงเวกเตอร์เป็นโครงข่ายกราฟแบบเส้นตรงตั้งฉาก[cite: 1]</td>
+            </tr>
+            <tr>
+                <td><strong>4. Database Layer</strong></td>
+                <td>PostgreSQL + PostGIS</td>
+                <td>จัดเก็บ Shapefile ขอบเขตการปกครอง, ข้อมูลทางน้ำดิบ, และจัดเก็บ Versioning ของผังน้ำที่ชุมชนยืนยันแล้ว</td>
+            </tr>
+        </table>
+    </div>
+
+    <div class="section">
+        <h2>2. กระบวนการทำงาน (Phased Workflow)</h2>
+        
+        <h3>Phase 1: Data Ingestion & Setup (เตรียมและนำเข้าข้อมูล)</h3>
+        <ul>
+            <li>ผู้ใช้งานเลือกระดับพื้นที่ (จังหวัด > อำเภอ > ตำบล) ผ่าน Web UI</li>
+            <li>ระบบคิวรีขอบเขตพื้นที่ (Tambon Boundary) จาก PostGIS และสร้าง Buffer เผื่อพื้นที่รอยต่อ</li>
+            <li>ดึงข้อมูลเส้นทางน้ำหลัก/สาขาอัตโนมัติ และอัปโหลดไฟล์ภาคสนาม (CSV/GeoJSON) ที่มีพิกัดของ ฝาย ปตร. หรือแหล่งน้ำ</li>
+        </ul>
+
+        <h3>Phase 2: Spatial Integration & Routing (วิเคราะห์เชิงพื้นที่และโครงข่าย)</h3>
+        <ul>
+            <li>ระบบเชื่อมเส้นทางน้ำที่ขาด (Topology Snapping) และใช้ DEM เพื่อกำหนดทิศทางลูกศรการไหลของน้ำ[cite: 1]</li>
+            <li>อัลกอริทึมสร้างรัศมีค้นหา (Buffer) รอบพิกัดโครงสร้างที่นำเข้า และ <strong>Snap</strong> จุดเหล่านั้นเข้ากับเส้นทางน้ำที่ใกล้ที่สุด</li>
+            <li>แบ่งเส้นทางน้ำ (Split Line) ณ จุดที่มีโครงสร้างขวางกั้น เพื่อแทรกโหนด (Node) เข้าไปในระบบกราฟ</li>
+        </ul>
+
+        <h3>Phase 3: Schematic Transformation (การดัดเส้นสร้างผังภาพ)</h3>
+        <ul>
+            <li>แปลงเส้นทางน้ำธรรมชาติที่คดเคี้ยวให้เป็นแนวเส้นตรง[cite: 1] ด้วย Orthogonal Graph Layout</li>
+            <li>ปรับความหนาของเส้นเพื่อแยกขนาดเส้นน้ำหลักและเส้นสาขาอย่างชัดเจน[cite: 1]</li>
+            <li>จัดมุมการหักเลี้ยวของทิศทางน้ำให้ดูง่ายและเป็นระเบียบ[cite: 1]</li>
+        </ul>
+
+        <h3>Phase 4: Human-in-the-Loop Verification (การตรวจสอบโดยชุมชน)</h3>
+        <ul>
+            <li>แสดงผลโครงร่างผังน้ำบน Interactive Canvas ให้ชุมชนตรวจสอบ</li>
+            <li>ระบบแสดงผลสัญลักษณ์มาตรฐานอัตโนมัติตามข้อมูลที่นำเข้า เช่น สามเหลี่ยมสีดำสำหรับอ่างเก็บน้ำใช้งานได้ หรือสี่เหลี่ยมขนมเปียกปูนสีขาวสำหรับ ปตร. ที่อยู่ในแผน[cite: 1]</li>
+            <li>ชุมชนสามารถเพิ่มแหล่งน้ำ ปรับแก้ทิศทาง หรือลากเส้นคลองสาขาที่ตกสำรวจเพิ่มเติมได้ทันที</li>
+        </ul>
+
+        <h3>Phase 5: Export & Synchronization (การส่งออกและเชื่อมโยงข้อมูล)</h3>
+        <ul>
+            <li>กดบันทึกเพื่อ Export ภาพผังน้ำพร้อมคำอธิบายสัญลักษณ์ที่สมบูรณ์ตามมาตรฐาน[cite: 1]</li>
+            <li>ระบบประมาณการพิกัด (Reverse Geocoding) จากจุดที่ชุมชนแก้ไขบนผัง กลับไปเป็นข้อมูลพิกัดภูมิศาสตร์เพื่ออัปเดตลงฐานข้อมูลกลาง</li>
+        </ul>
+    </div>
+
+    <div class="section">
+        <h2>3. ลิสต์รายการสิ่งที่ต้องใช้ (Requirements List)</h2>
+        
+        <h3>ด้านข้อมูล (Data Requirements)</h3>
+        <ul>
+            <li><strong>ขอบเขตการปกครอง:</strong> ไฟล์ Shapefile หรือ GeoJSON ระดับตำบล</li>
+            <li><strong>ข้อมูลเส้นน้ำตั้งต้น:</strong> ฐานข้อมูล HydroRIVERS หรือ OpenStreetMap (OSM)</li>
+            <li><strong>แบบจำลองระดับความสูง (DEM):</strong> ความละเอียด 30 เมตร (เช่น Copernicus DEM หรือ SRTM)</li>
+            <li><strong>ชุดข้อมูลภาคสนาม:</strong> ไฟล์ Template CSV หรือ GeoJSON ที่มีฟิลด์: <em>lat, lon, type, name, status, area_rai</em> เพื่อจับคู่สัญลักษณ์[cite: 1]</li>
+        </ul>
+
+        <h3>ด้านไลบรารีและเทคโนโลยี (Software & Libraries)</h3>
+        <ul>
+            <li><strong>Frontend:</strong> React.js, React Flow (สำหรับกราฟเชิงโต้ตอบ), Axios (สำหรับ API calls)</li>
+            <li><strong>Backend:</strong> Python, FastAPI, Uvicorn</li>
+            <li><strong>Geospatial Processing:</strong> GeoPandas, Shapely (จัดการ Geometry), PySheds (วิเคราะห์ DEM/ทิศทางน้ำ), NetworkX (จัดเรียง Graph)</li>
+            <li><strong>Database:</strong> PostgreSQL 14+ พร้อม PostGIS Extension</li>
+        </ul>
+
+        <h3>ด้านฮาร์ดแวร์และโครงสร้างพื้นฐาน (Infrastructure)</h3>
+        <ul>
+            <li><strong>Cloud Server:</strong> สำหรับรัน Backend และ Database (เช่น AWS EC2 หรือ DigitalOcean Droplet รันบน Linux)</li>
+            <li><strong>Client Device:</strong> คอมพิวเตอร์ หรือแท็บเล็ตหน้าจอขนาดใหญ่ สำหรับให้ชุมชน/เจ้าหน้าที่ใช้ตรวจสอบลากวางข้อมูลในพื้นที่หน้างาน</li>
+        </ul>
+    </div>
+
+</body>
+</html>

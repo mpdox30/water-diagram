@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดทำผังน้ำชุมชน - Interactive Canvas (Undo/Redo)</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; background-color: #f0f2f5; }
+        #sidebar { width: 340px; background: #fff; padding: 15px; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 10; display: flex; flex-direction: column; overflow-y: auto; }
+        #cy { flex-grow: 1; position: relative; }
+        h3 { color: #0056b3; font-size: 15px; margin: 10px 0 5px 0; border-bottom: 1px solid #eee; padding-bottom: 5px;}
+        
+        .history-controls { display: flex; gap: 10px; margin-bottom: 10px; }
+        .history-btn { flex: 1; background: #e2e3e5; border: 1px solid #ccc; padding: 8px; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .history-btn:hover:not(:disabled) { background: #d6d8db; }
+        .history-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .tool-btn { 
+            background: #fff; border: 1px solid #ccc; padding: 6px 8px; margin-bottom: 4px; 
+            border-radius: 4px; cursor: pointer; display: flex; align-items: center; transition: 0.2s; font-size: 13px;
+        }
+        .tool-btn:hover { background: #e9ecef; }
+        .tool-btn.active { background: #cce5ff; border-color: #0056b3; font-weight: bold; }
+        .tool-btn.danger.active { background: #f8d7da; border-color: #dc3545; color: #dc3545; }
+        .tool-btn.edit.active { background: #fff3cd; border-color: #ffc107; color: #856404; }
+        .tool-btn.rotate.active { background: #d1ecf1; border-color: #17a2b8; color: #0c5460; }
+        
+        .icon { width: 20px; height: 20px; margin-right: 10px; display: inline-flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; color: black; }
+        .line-icon { width: 20px; height: 4px; background: #0056b3; margin-right: 10px; display: inline-block; }
+        .line-icon.thin { height: 2px; background: #4da6ff; }
+        
+        #instruction { margin-top: 15px; font-size: 12px; color: #666; background: #f8f9fa; padding: 10px; border-radius: 5px; line-height: 1.5;}
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h2 style="font-size: 18px; color: #0056b3; text-align: center; margin-top: 0;">เครื่องมือจัดการผังน้ำ</h2>
+        
+        <!-- แถบเครื่องมือ Undo/Redo -->
+        <div class="history-controls">
+            <button id="btn-undo" class="history-btn" onclick="undo()" disabled>↶ เลิกทำ (Undo)</button>
+            <button id="btn-redo" class="history-btn" onclick="redo()" disabled>↷ ทำซ้ำ (Redo)</button>
+        </div>
+        
+        <h3>1. จุดเชื่อมและลำน้ำ</h3>
+        <button class="tool-btn" onclick="selectTool('generic_node', this)"><span class="icon" style="color: #6c757d;">●</span> เพิ่มจุดเชื่อม (Node)</button>
+        <button class="tool-btn" onclick="selectTool('draw_main', this)"><span class="line-icon"></span> วาดลำน้ำหลัก</button>
+        <button class="tool-btn" onclick="selectTool('draw_branch', this)"><span class="line-icon thin"></span> วาดลำน้ำสาขา</button>
+
+        <h3>2. โครงสร้างปัจจุบัน (ดำทึบ)</h3>
+        <button class="tool-btn" onclick="selectTool('gate', this)"><span class="icon">◆</span> ปตร. (ปัจจุบัน)</button>
+        <button class="tool-btn" onclick="selectTool('weir', this)"><span class="icon">▬</span> ฝาย (ปัจจุบัน)</button>
+        <button class="tool-btn" onclick="selectTool('reservoir', this)"><span class="icon">▲</span> อ่างเก็บน้ำ</button>
+        <button class="tool-btn" onclick="selectTool('waterbody', this)"><span class="icon">▭</span> แหล่งน้ำ/บึง</button>
+        <button class="tool-btn" onclick="selectTool('telemetry', this)"><span class="icon">◎</span> สถานีโทรมาตร</button>
+        <button class="tool-btn" onclick="selectTool('pump', this)"><span class="icon">℗</span> สถานีสูบน้ำ</button>
+
+        <h3>3. แผนในอนาคต (โปร่งขอบดำ)</h3>
+        <button class="tool-btn" onclick="selectTool('gate_plan', this)"><span class="icon" style="color:gray;">◇</span> ปตร. (แผน)</button>
+        <button class="tool-btn" onclick="selectTool('weir_plan', this)"><span class="icon" style="color:gray;">▭</span> ฝาย (แผน)</button>
+
+        <h3>4. จัดการข้อมูล (แก้ไข/หมุน/ลบ)</h3>
+        <button class="tool-btn" onclick="selectTool('text_box', this)"><span class="icon" style="color:#0056b3; font-size:16px;">T</span> วางข้อความอิสระ</button>
+        <button class="tool-btn edit" onclick="selectTool('edit_info', this)"><span class="icon" style="color:#856404; font-size:16px;">✎</span> แก้ไขชื่อ/รายละเอียด</button>
+        <button class="tool-btn rotate" onclick="selectTool('rotate', this)"><span class="icon" style="color:#17a2b8; font-size:18px;">↻</span> หมุนสัญลักษณ์ (90 องศา)</button>
+        <button class="tool-btn danger" onclick="selectTool('delete', this)"><span class="icon" style="color:red;">✖</span> ลบข้อมูล (เส้น/โหนด)</button>
+
+        <div id="instruction">
+            <strong>สถานะปัจจุบัน:</strong> <span id="current-tool" style="color:#0056b3; font-weight:bold;">ดูผังภาพ (View)</span><br><br>
+            <span id="help-text">คลิกที่พื้นที่ว่างเพื่อยกเลิกเครื่องมือ หรือใช้เมาส์ซูม/เลื่อนดูผังน้ำ</span>
+        </div>
+        
+        <button style="margin-top: 15px; padding: 10px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight:bold;" onclick="exportData()">
+            บันทึกผังน้ำชุมชน
+        </button>
+    </div>
+
+    <div id="cy"></div>
+
+    <script>
+        let currentTool = null;
+        let sourceNodeForEdge = null; 
+        let nodeCount = 100; 
+
+        // ระบบ History สำหรับ Undo/Redo
+        let historyStack = [];
+        let historyIndex = -1;
+
+        // บันทึกสถานะ (Snapshot)
+        function saveState() {
+            // หากมีการเปลี่ยนแปลงใหม่หลังจากกด Undo ไปแล้ว ให้ทิ้ง History อนาคตที่ทำซ้ำไม่ได้แล้ว
+            if (historyIndex < historyStack.length - 1) {
+                historyStack = historyStack.slice(0, historyIndex + 1);
+            }
+            // บันทึกข้อมูลกราฟแบบ JSON เก็บไว้ใน Array
+            historyStack.push(cy.elements().jsons());
+            historyIndex++;
+            updateHistoryUI();
+        }
+
+        // ย้อนกลับ (Undo)
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                cy.elements().remove(); // ลบของเดิมบนจอทิ้ง
+                cy.add(historyStack[historyIndex]); // โหลดของเก่ากลับมา
+                updateHistoryUI();
+            }
+        }
+
+        // ทำซ้ำ (Redo)
+        function redo() {
+            if (historyIndex < historyStack.length - 1) {
+                historyIndex++;
+                cy.elements().remove();
+                cy.add(historyStack[historyIndex]);
+                updateHistoryUI();
+            }
+        }
+
+        // อัปเดตปุ่ม Undo/Redo
+        function updateHistoryUI() {
+            document.getElementById('btn-undo').disabled = historyIndex <= 0;
+            document.getElementById('btn-redo').disabled = historyIndex >= historyStack.length - 1;
+        }
+
+        function selectTool(tool, element) {
+            currentTool = tool;
+            sourceNodeForEdge = null; 
+            
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            if(element) element.classList.add('active');
+            
+            let statusText = "ดูผังภาพ (View)";
+            let helpText = "คลิกที่พื้นที่ว่างเพื่อยกเลิกเครื่องมือ";
+
+            const insertTools = ['gate', 'weir', 'reservoir', 'telemetry', 'pump', 'gate_plan', 'weir_plan', 'reservoir_plan', 'generic_node'];
+            
+            if(insertTools.includes(tool)) {
+                statusText = "แทรกโหนด/โครงสร้าง";
+                helpText = "คลิกที่ <b>'เส้นลำน้ำ'</b> เพื่อแทรกจุด/โครงสร้าง หรือคลิกพื้นที่ว่างเพื่อวางอิสระ";
+            } else if (tool === 'waterbody') {
+                statusText = "เพิ่มแหล่งน้ำ";
+                helpText = "คลิกที่พื้นที่ว่าง หรือใกล้ลำน้ำเพื่อวางแหล่งน้ำ";
+            } else if (tool.startsWith('draw_')) {
+                statusText = "วาดเส้นทางน้ำ";
+                helpText = "1. คลิก <b>'โหนดต้นทาง'</b><br>2. คลิก <b>'โหนดปลายทาง'</b> เพื่อเชื่อมเส้น";
+            } else if (tool === 'delete') {
+                statusText = "ลบข้อมูล";
+                helpText = "คลิกที่ <b>'เส้น'</b> หรือ <b>'โหนด'</b> ที่ต้องการลบ";
+            } else if (tool === 'edit_info') {
+                statusText = "แก้ไขข้อมูล";
+                helpText = "คลิกที่ <b>'โครงสร้าง'</b> หรือ <b>'เส้นคลอง'</b> ที่ต้องการเปลี่ยนชื่อหรือใส่รายละเอียด";
+            } else if (tool === 'text_box') {
+                statusText = "ข้อความอิสระ";
+                helpText = "คลิกที่ <b>'พื้นที่ว่าง'</b> บริเวณที่ต้องการวางข้อความกำกับ";
+            } else if (tool === 'rotate') {
+                statusText = "หมุนสัญลักษณ์";
+                helpText = "คลิกที่ <b>'ฝาย'</b> หรือ <b>'กล่องข้อความ'</b> เพื่อหมุน";
+            }
+
+            document.getElementById('current-tool').innerHTML = statusText;
+            document.getElementById('help-text').innerHTML = helpText;
+            cy.nodes().removeClass('selected-source');
+        }
+
+        const initialElements = [
+            { data: { id: 'n1', label: 'จุดกำเนิดน้ำ', rotation: 0, dir: 'h' }, position: { x: 300, y: 100 } },
+            { data: { id: 'n2', label: 'จุดตัดคลอง', rotation: 0, dir: 'h' }, position: { x: 300, y: 300 } },
+            { data: { id: 'n3', label: 'ปลายน้ำ', rotation: 0, dir: 'h' }, position: { x: 300, y: 500 } },
+            { data: { id: 'n4', label: 'บึงสลุต\n500,000 ลบ.ม.', type: 'waterbody', rotation: 0, dir: 'h' }, position: { x: 500, y: 300 } },
+            { data: { id: 'e1', source: 'n1', target: 'n2', label: 'คลองหลัก', type: 'main' } },
+            { data: { id: 'e2', source: 'n2', target: 'n3', label: 'คลองหลัก', type: 'main' } }
+        ];
+
+        const cy = cytoscape({
+            container: document.getElementById('cy'),
+            elements: initialElements,
+            style: [
+                { selector: 'node', style: { 'background-color': '#adb5bd', 'width': 12, 'height': 12, 'label': 'data(label)', 'font-family': 'Sarabun', 'font-size': '12px', 'text-valign': 'top', 'text-margin-y': -5, 'text-wrap': 'wrap', 'text-max-width': '150px', 'text-rotation': function(ele){ return (ele.data('rotation') || 0) + 'deg'; } } },
+                { selector: 'node[type="generic_node"]', style: { 'background-color': '#6c757d', 'width': 15, 'height': 15 } },
+                
+                { selector: 'node[type="text_box"]', style: { 'shape': 'rectangle', 'background-opacity': 0, 'width': 1, 'height': 1, 'color': '#d9534f', 'font-size': '14px', 'font-weight': 'bold', 'text-valign': 'center', 'text-halign': 'center', 'text-outline-width': 2, 'text-outline-color': '#ffffff' } },
+                
+                { selector: 'edge', style: { 'width': 3, 'line-color': '#4da6ff', 'target-arrow-color': '#4da6ff', 'target-arrow-shape': 'triangle', 'curve-style': 'taxi', 'taxi-direction': 'downward', 'label': 'data(label)', 'font-size': '12px', 'text-rotation': 'autorotate', 'text-margin-y': -10, 'text-background-color': '#ffffff', 'text-background-opacity': 0.7, 'text-background-padding': '2px' } },
+                { selector: 'edge[type="main"]', style: { 'width': 6, 'line-color': '#0056b3', 'target-arrow-color': '#0056b3' } },
+                
+                { selector: 'node[type="gate"]', style: { 'shape': 'diamond', 'background-color': 'black', 'width': 25, 'height': 25, 'text-margin-y': -15 } },
+                { selector: 'node[type="weir"]', style: { 'shape': 'rectangle', 'background-color': 'black', 'width': 35, 'height': 12, 'text-margin-y': -10 } },
+                { selector: 'node[type="weir"][dir="v"]', style: { 'width': 12, 'height': 35, 'text-margin-y': -5, 'text-margin-x': 0, 'text-valign': 'top', 'text-halign': 'center' } }, 
+                { selector: 'node[type="reservoir"]', style: { 'shape': 'triangle', 'background-color': 'black', 'width': 30, 'height': 30, 'text-margin-y': -15 } },
+                
+                { selector: 'node[type="gate_plan"]', style: { 'shape': 'diamond', 'background-color': 'white', 'border-width': 2, 'border-color': 'black', 'width': 25, 'height': 25, 'text-margin-y': -15 } },
+                { selector: 'node[type="weir_plan"]', style: { 'shape': 'rectangle', 'background-color': 'white', 'border-width': 2, 'border-color': 'black', 'width': 35, 'height': 12, 'text-margin-y': -10 } },
+                { selector: 'node[type="weir_plan"][dir="v"]', style: { 'width': 12, 'height': 35, 'text-margin-y': -5, 'text-margin-x': 0, 'text-valign': 'top', 'text-halign': 'center' } },
+                
+                { selector: 'node[type="telemetry"]', style: { 'shape': 'ellipse', 'background-color': 'white', 'border-width': 4, 'border-color': 'black', 'width': 20, 'height': 20 } },
+                { selector: 'node[type="pump"]', style: { 'shape': 'ellipse', 'background-color': 'white', 'border-width': 2, 'border-color': 'black', 'width': 25, 'height': 25, 'label': 'P', 'text-valign': 'center', 'text-halign': 'center', 'font-weight': 'bold', 'color': 'black', 'font-size': '14px' } },
+                { selector: 'node[type="waterbody"]', style: { 'shape': 'round-rectangle', 'background-color': '#99ccff', 'border-width': 1, 'border-color': '#0056b3', 'width': 70, 'height': 35, 'text-valign': 'center', 'text-margin-y': 0, 'color': '#003366', 'font-weight': 'bold' } },
+                { selector: 'node[type="waterbody"][dir="v"]', style: { 'width': 35, 'height': 70 } }, 
+                
+                { selector: '.selected-source', style: { 'border-width': 3, 'border-color': '#ffc107', 'background-color': '#ffc107' } }
+            ]
+        });
+
+        // บันทึกสถานะตั้งต้นเมื่อโหลดหน้าเว็บ
+        cy.ready(function() {
+            saveState();
+        });
+
+        // บันทึก History หากผู้ใช้ลากจุดเปลี่ยนตำแหน่ง
+        cy.on('dragfree', 'node', function() {
+            saveState();
+        });
+
+        cy.on('tap', function(evt) {
+            let target = evt.target;
+            const insertTools = ['gate', 'weir', 'reservoir', 'telemetry', 'pump', 'gate_plan', 'weir_plan', 'reservoir_plan', 'generic_node'];
+            const labelMap = { 
+                gate: 'ปตร.', weir: 'ฝาย', reservoir: 'อ่างฯ', telemetry: 'โทรมาตร', pump: '', 
+                gate_plan: 'ปตร.(แผน)', weir_plan: 'ฝาย(แผน)', generic_node: '', waterbody: 'ชื่อแหล่งน้ำ\n(ความจุ)'
+            };
+
+            // 1. โหมดหมุนสัญลักษณ์ (Rotate)
+            if (currentTool === 'rotate') {
+                if (target.isNode && target.isNode()) {
+                    let type = target.data('type');
+                    
+                    if (['weir', 'weir_plan', 'waterbody'].includes(type)) {
+                        let currentDir = target.data('dir') || 'h';
+                        target.data('dir', currentDir === 'h' ? 'v' : 'h');
+                        target.data('rotation', 0);
+                    } else {
+                        let currentRot = target.data('rotation') || 0;
+                        target.data('rotation', (currentRot + 90) % 360);
+                    }
+                    saveState(); // บันทึก History หลังหมุน
+                }
+                return;
+            }
+
+            // 2. โหมดแก้ไขชื่อ/รายละเอียด (Edit Info)
+            if (currentTool === 'edit_info') {
+                if (target !== cy) {
+                    let currentLabel = target.data('label') || '';
+                    let textType = target.isEdge() ? "ชื่อลำน้ำ" : "ชื่อ/รายละเอียด (ใช้ \\n เพื่อขึ้นบรรทัดใหม่)";
+                    let newLabel = prompt(`กรุณากรอก ${textType}:`, currentLabel.replace(/\n/g, "\\n"));
+                    
+                    if (newLabel !== null) {
+                        target.data('label', newLabel.replace(/\\n/g, "\n")); 
+                        saveState(); // บันทึก History หลังแก้ข้อความ
+                    }
+                }
+                return;
+            }
+
+            // 3. โหมดข้อความอิสระ (Text Box)
+            if (currentTool === 'text_box') {
+                if (target === cy) { 
+                    let text = prompt("กรอกข้อความอิสระ:");
+                    if (text) {
+                        cy.add({ group: 'nodes', data: { id: 't_new_' + nodeCount++, label: text, type: 'text_box', rotation: 0, dir: 'h' }, position: evt.position });
+                        saveState(); // บันทึก History หลังเพิ่มข้อความ
+                    }
+                    selectTool(null, null);
+                }
+                return;
+            }
+
+            // 4. โหมดลบ
+            if (currentTool === 'delete') {
+                if (target !== cy) {
+                    cy.remove(target);
+                    saveState(); // บันทึก History หลังลบ
+                }
+                return;
+            }
+
+            // 5. โหมดวาดเส้น
+            if (currentTool === 'draw_main' || currentTool === 'draw_branch') {
+                if (target === cy) {
+                    sourceNodeForEdge = null;
+                    cy.nodes().removeClass('selected-source');
+                } else if (target.isNode()) {
+                    if (!sourceNodeForEdge) {
+                        sourceNodeForEdge = target;
+                        target.addClass('selected-source');
+                    } else {
+                        if(sourceNodeForEdge.id() !== target.id()) {
+                            let edgeType = currentTool === 'draw_main' ? 'main' : 'branch';
+                            cy.add({
+                                group: 'edges',
+                                data: { id: 'e_new_' + nodeCount++, source: sourceNodeForEdge.id(), target: target.id(), type: edgeType, label: 'คลองใหม่' }
+                            });
+                            saveState(); // บันทึก History หลังสร้างเส้น
+                        }
+                        sourceNodeForEdge.removeClass('selected-source');
+                        sourceNodeForEdge = null; 
+                    }
+                }
+                return;
+            }
+
+            // 6. แทรกโหนด/โครงสร้างลงบนเส้นเดิม (Split Line)
+            if (target.isEdge && target.isEdge() && insertTools.includes(currentTool)) {
+                let sourceId = target.data('source');
+                let targetId = target.data('target');
+                let edgeType = target.data('type');
+                
+                cy.add({ group: 'nodes', data: { id: 'n_new_' + nodeCount, label: labelMap[currentTool], type: currentTool, rotation: 0, dir: 'h' }, position: evt.position });
+                
+                cy.remove(target);
+                cy.add([
+                    { group: 'edges', data: { id: 'e_splitA_' + nodeCount, source: sourceId, target: 'n_new_' + nodeCount, type: edgeType, label: target.data('label') } },
+                    { group: 'edges', data: { id: 'e_splitB_' + nodeCount, source: 'n_new_' + nodeCount, target: targetId, type: edgeType } }
+                ]);
+                nodeCount++;
+                saveState(); // บันทึก History หลังตัดเส้นแทรกโหนด
+                
+                if(currentTool !== 'generic_node') selectTool(null, null); 
+                return;
+            }
+
+            // 7. วางโหนด/โครงสร้างอิสระบนพื้นที่ว่าง
+            if (target === cy && (insertTools.includes(currentTool) || currentTool === 'waterbody')) {
+                cy.add({ group: 'nodes', data: { id: 'n_new_' + nodeCount++, label: labelMap[currentTool], type: currentTool, rotation: 0, dir: 'h' }, position: evt.position });
+                saveState(); // บันทึก History หลังวางโหนดอิสระ
+                
+                if(!['waterbody', 'generic_node'].includes(currentTool)) selectTool(null, null); 
+                return;
+            }
+        });
+
+        function exportData() {
+            let exportedJSON = cy.json();
+            alert("บันทึกข้อมูลเรียบร้อย!");
+            console.log(JSON.stringify(exportedJSON.elements, null, 2));
+        }
+    </script>
+</body>
+</html>

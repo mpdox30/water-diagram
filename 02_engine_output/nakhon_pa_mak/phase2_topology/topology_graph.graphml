@@ -1,0 +1,976 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d6" for="edge" attr.name="name" attr.type="string"/>
+<key id="d5" for="edge" attr.name="waterway_tag" attr.type="string"/>
+<key id="d4" for="edge" attr.name="source" attr.type="string"/>
+<key id="d3" for="edge" attr.name="length_m" attr.type="double"/>
+<key id="d2" for="edge" attr.name="edge_id" attr.type="long"/>
+<key id="d1" for="node" attr.name="y" attr.type="double"/>
+<key id="d0" for="node" attr.name="x" attr.type="double"/>
+<graph edgedefault="undirected"><node id="0">
+  <data key="d0">641722.3130569321</data>
+  <data key="d1">1844367.0968563918</data>
+</node>
+<node id="2">
+  <data key="d0">641545.7880492273</data>
+  <data key="d1">1826744.0533231802</data>
+</node>
+<node id="3">
+  <data key="d0">644012.5625868273</data>
+  <data key="d1">1835200.568215938</data>
+</node>
+<node id="4">
+  <data key="d0">642013.0938258824</data>
+  <data key="d1">1836379.9086239545</data>
+</node>
+<node id="6">
+  <data key="d0">639425.1307059943</data>
+  <data key="d1">1836288.7419496004</data>
+</node>
+<node id="7">
+  <data key="d0">639492.1360536497</data>
+  <data key="d1">1835325.7142302403</data>
+</node>
+<node id="12">
+  <data key="d0">638856.9105559785</data>
+  <data key="d1">1834269.212139738</data>
+</node>
+<node id="14">
+  <data key="d0">644891.8013625428</data>
+  <data key="d1">1841142.0143949494</data>
+</node>
+<node id="18">
+  <data key="d0">645337.8459266819</data>
+  <data key="d1">1837332.6717352895</data>
+</node>
+<node id="19">
+  <data key="d0">645969.3027682893</data>
+  <data key="d1">1838157.5163048843</data>
+</node>
+<node id="21">
+  <data key="d0">642921.4798034336</data>
+  <data key="d1">1833583.603844658</data>
+</node>
+<node id="22">
+  <data key="d0">642770.9822176701</data>
+  <data key="d1">1834437.6083420517</data>
+</node>
+<node id="24">
+  <data key="d0">645810.2919760448</data>
+  <data key="d1">1835433.2544787312</data>
+</node>
+<node id="25">
+  <data key="d0">645408.5678236407</data>
+  <data key="d1">1835311.838443454</data>
+</node>
+<node id="27">
+  <data key="d0">644131.7359599263</data>
+  <data key="d1">1835359.9492502555</data>
+</node>
+<node id="28">
+  <data key="d0">642823.6124438543</data>
+  <data key="d1">1835424.966272548</data>
+</node>
+<node id="29">
+  <data key="d0">643592.1747611148</data>
+  <data key="d1">1835024.684264783</data>
+</node>
+<node id="30">
+  <data key="d0">642483.7169926502</data>
+  <data key="d1">1833109.8772693262</data>
+</node>
+<node id="31">
+  <data key="d0">643297.4856604249</data>
+  <data key="d1">1832853.8367742652</data>
+</node>
+<node id="32">
+  <data key="d0">648521.3235523872</data>
+  <data key="d1">1842679.5005366008</data>
+</node>
+<node id="33">
+  <data key="d0">647203.4567060205</data>
+  <data key="d1">1842376.2371172607</data>
+</node>
+<node id="34">
+  <data key="d0">647027.8208861925</data>
+  <data key="d1">1841928.1448781968</data>
+</node>
+<node id="37">
+  <data key="d0">646581.7633696909</data>
+  <data key="d1">1839829.9640957324</data>
+</node>
+<node id="38">
+  <data key="d0">646481.7440174352</data>
+  <data key="d1">1839606.073141298</data>
+</node>
+<node id="39">
+  <data key="d0">646446.763807577</data>
+  <data key="d1">1839614.2555129486</data>
+</node>
+<node id="40">
+  <data key="d0">645527.3096492948</data>
+  <data key="d1">1842596.0891881008</data>
+</node>
+<node id="42">
+  <data key="d0">645598.1989748855</data>
+  <data key="d1">1842716.997966994</data>
+</node>
+<node id="43">
+  <data key="d0">644485.495354962</data>
+  <data key="d1">1843987.546550689</data>
+</node>
+<node id="44">
+  <data key="d0">646338.0819785943</data>
+  <data key="d1">1842874.2522914954</data>
+</node>
+<node id="47">
+  <data key="d0">645734.7710413379</data>
+  <data key="d1">1842524.0323683857</data>
+</node>
+<node id="48">
+  <data key="d0">639614.8893230816</data>
+  <data key="d1">1835380.439243899</data>
+</node>
+<node id="51">
+  <data key="d0">638882.0444050923</data>
+  <data key="d1">1839574.8215263933</data>
+</node>
+<node id="52">
+  <data key="d0">643796.2538973133</data>
+  <data key="d1">1842191.5313288714</data>
+</node>
+<node id="55">
+  <data key="d0">646047.4668528612</data>
+  <data key="d1">1835211.278111957</data>
+</node>
+<node id="56">
+  <data key="d0">646472.507207176</data>
+  <data key="d1">1834947.3618022713</data>
+</node>
+<node id="57">
+  <data key="d0">646189.6499690508</data>
+  <data key="d1">1834161.6017212446</data>
+</node>
+<node id="58">
+  <data key="d0">645961.0669403228</data>
+  <data key="d1">1833927.4894249926</data>
+</node>
+<node id="59">
+  <data key="d0">648088.6102477814</data>
+  <data key="d1">1830953.5447324442</data>
+</node>
+<node id="60">
+  <data key="d0">646257.3567000012</data>
+  <data key="d1">1843403.7905000001</data>
+</node>
+<node id="61">
+  <data key="d0">645826.3464000021</data>
+  <data key="d1">1843103.9416000003</data>
+</node>
+<node id="62">
+  <data key="d0">645646.8755999998</data>
+  <data key="d1">1842860.5811000003</data>
+</node>
+<node id="63">
+  <data key="d0">644580.0612000024</data>
+  <data key="d1">1842852.0727999993</data>
+</node>
+<node id="64">
+  <data key="d0">646432.0036000023</data>
+  <data key="d1">1841768.7533</data>
+</node>
+<node id="65">
+  <data key="d0">643722.6666000017</data>
+  <data key="d1">1840737.8731999996</data>
+</node>
+<node id="66">
+  <data key="d0">643893.8421000019</data>
+  <data key="d1">1840798.9207000008</data>
+</node>
+<node id="67">
+  <data key="d0">646962.6320000013</data>
+  <data key="d1">1840612.0988</data>
+</node>
+<node id="68">
+  <data key="d0">647973.1272000021</data>
+  <data key="d1">1840525.8363000008</data>
+</node>
+<node id="69">
+  <data key="d0">651957.2718000025</data>
+  <data key="d1">1840857.9087000007</data>
+</node>
+<node id="70">
+  <data key="d0">649327.1773000015</data>
+  <data key="d1">1839665.3815</data>
+</node>
+<node id="71">
+  <data key="d0">651516.4737000021</data>
+  <data key="d1">1839168.1927000002</data>
+</node>
+<node id="72">
+  <data key="d0">651328.0726000018</data>
+  <data key="d1">1839143.277699999</data>
+</node>
+<node id="73">
+  <data key="d0">653207.7128000024</data>
+  <data key="d1">1839144.3575</data>
+</node>
+<node id="76">
+  <data key="d0">653627.9202000016</data>
+  <data key="d1">1837988.1560999993</data>
+</node>
+<node id="77">
+  <data key="d0">646610.6169000012</data>
+  <data key="d1">1839006.4556000016</data>
+</node>
+<node id="78">
+  <data key="d0">647049.6091000019</data>
+  <data key="d1">1837117.4601000012</data>
+</node>
+<node id="80">
+  <data key="d0">643049.8552000013</data>
+  <data key="d1">1837683.8948</data>
+</node>
+<node id="84">
+  <data key="d0">654160.4459000024</data>
+  <data key="d1">1836685.658</data>
+</node>
+<node id="85">
+  <data key="d0">644263.841300002</data>
+  <data key="d1">1835696.0894000009</data>
+</node>
+<node id="86">
+  <data key="d0">650820.3430000027</data>
+  <data key="d1">1835674.5737999994</data>
+</node>
+<node id="87">
+  <data key="d0">647594.321400001</data>
+  <data key="d1">1836228.9109000005</data>
+</node>
+<node id="90">
+  <data key="d0">647543.3125999997</data>
+  <data key="d1">1835646.129599999</data>
+</node>
+<node id="94">
+  <data key="d0">646078.6197000011</data>
+  <data key="d1">1835482.9328</data>
+</node>
+<node id="96">
+  <data key="d0">646671.6279000016</data>
+  <data key="d1">1835118.3670000006</data>
+</node>
+<node id="99">
+  <data key="d0">648223.504000002</data>
+  <data key="d1">1835330.0239000001</data>
+</node>
+<node id="100">
+  <data key="d0">646754.6058000011</data>
+  <data key="d1">1834523.728</data>
+</node>
+<node id="101">
+  <data key="d0">647729.5532000014</data>
+  <data key="d1">1834185.5068999995</data>
+</node>
+<node id="102">
+  <data key="d0">647676.095400002</data>
+  <data key="d1">1834769.0381000005</data>
+</node>
+<node id="103">
+  <data key="d0">644621.4636000011</data>
+  <data key="d1">1835171.2161999992</data>
+</node>
+<node id="104">
+  <data key="d0">650688.6651000015</data>
+  <data key="d1">1833618.6223000006</data>
+</node>
+<node id="105">
+  <data key="d0">644315.245900003</data>
+  <data key="d1">1833639.8179000001</data>
+</node>
+<node id="106">
+  <data key="d0">638833.3509000014</data>
+  <data key="d1">1833442.5680999998</data>
+</node>
+<node id="107">
+  <data key="d0">641965.2710000011</data>
+  <data key="d1">1833407.5752000005</data>
+</node>
+<edge source="0" target="4" id="0">
+  <data key="d2">0</data>
+  <data key="d3">17211.433761407257</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6">แคววังทอง</data>
+</edge>
+<edge source="2" target="3" id="1">
+  <data key="d2">1</data>
+  <data key="d3">12884.813044396213</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6">แคววังทอง</data>
+</edge>
+<edge source="3" target="4" id="2">
+  <data key="d2">2</data>
+  <data key="d3">2610.985576540357</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6">แคววังทอง</data>
+</edge>
+<edge source="3" target="27" id="28">
+  <data key="d2">28</data>
+  <data key="d3">198.9739540209184</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="4" target="48" id="0">
+  <data key="d2">20</data>
+  <data key="d3">3864.3966575264544</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="6" target="7" id="5">
+  <data key="d2">5</data>
+  <data key="d3">1804.6783810733882</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="6" target="48" id="0">
+  <data key="d2">4</data>
+  <data key="d3">966.1477030330548</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="6" target="6" id="0">
+  <data key="d2">64</data>
+  <data key="d3">9.972924791905005</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="6" target="6" id="1">
+  <data key="d2">59</data>
+  <data key="d3">12.090725724972945</data>
+  <data key="d4">osm</data>
+  <data key="d5">stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="6" target="6" id="2">
+  <data key="d2">61</data>
+  <data key="d3">12.401560578790964</data>
+  <data key="d4">osm</data>
+  <data key="d5">stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="6" target="51" id="0">
+  <data key="d2">57</data>
+  <data key="d3">5577.567324751782</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="7" target="7" id="6">
+  <data key="d2">6</data>
+  <data key="d3">11.45068382744899</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="7" target="7" id="55">
+  <data key="d2">55</data>
+  <data key="d3">3.224858262312304</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="7" target="7" id="140">
+  <data key="d2">140</data>
+  <data key="d3">7.258036702026605</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6">คลองบางกระท</data>
+</edge>
+<edge source="7" target="7" id="141">
+  <data key="d2">141</data>
+  <data key="d3">12.412915754886654</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6">คลองบางกระท</data>
+</edge>
+<edge source="7" target="7" id="4">
+  <data key="d2">8</data>
+  <data key="d3">12.535538520059278</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="7" target="7" id="5">
+  <data key="d2">143</data>
+  <data key="d3">12.640703027264411</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6">คลองบางกระท</data>
+</edge>
+<edge source="7" target="48" id="56">
+  <data key="d2">56</data>
+  <data key="d3">143.09317958829882</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="7" target="12" id="0">
+  <data key="d2">7</data>
+  <data key="d3">1477.2734384287871</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="12" target="12" id="13">
+  <data key="d2">13</data>
+  <data key="d3">33.82841512528928</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="12" target="106" id="148">
+  <data key="d2">148</data>
+  <data key="d3">918.3727298497661</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6">คลองบางกระท</data>
+</edge>
+<edge source="14" target="52" id="0">
+  <data key="d2">14</data>
+  <data key="d3">4390.806454980191</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="14" target="14" id="0">
+  <data key="d2">66</data>
+  <data key="d3">13.986263083615254</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="14" target="18" id="0">
+  <data key="d2">15</data>
+  <data key="d3">8038.7818498417855</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="14" target="37" id="0">
+  <data key="d2">67</data>
+  <data key="d3">13262.331422308092</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">major_river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="18" target="19" id="19">
+  <data key="d2">19</data>
+  <data key="d3">3046.6739890117165</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="18" target="25" id="82">
+  <data key="d2">82</data>
+  <data key="d3">6857.640059996013</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">major_river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="19" target="39" id="42">
+  <data key="d2">42</data>
+  <data key="d3">2003.7621869307052</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="19" target="24" id="0">
+  <data key="d2">23</data>
+  <data key="d3">3006.86504424392</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="21" target="21" id="21">
+  <data key="d2">21</data>
+  <data key="d3">13.518439175538346</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="21" target="21" id="150">
+  <data key="d2">150</data>
+  <data key="d3">1.2388740227411743</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6">คลองยางโทน</data>
+</edge>
+<edge source="21" target="22" id="22">
+  <data key="d2">22</data>
+  <data key="d3">1151.8694677009653</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="21" target="30" id="30">
+  <data key="d2">30</data>
+  <data key="d3">697.7632645898358</data>
+  <data key="d4">osm</data>
+  <data key="d5">drain</data>
+  <data key="d6"></data>
+</edge>
+<edge source="21" target="31" id="31">
+  <data key="d2">31</data>
+  <data key="d3">992.7079286445802</data>
+  <data key="d4">osm</data>
+  <data key="d5">drain</data>
+  <data key="d6"></data>
+</edge>
+<edge source="21" target="107" id="149">
+  <data key="d2">149</data>
+  <data key="d3">1219.8395205687912</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6">คลองยางโทน</data>
+</edge>
+<edge source="24" target="24" id="24">
+  <data key="d2">24</data>
+  <data key="d3">15.162044614231885</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="24" target="24" id="78">
+  <data key="d2">78</data>
+  <data key="d3">14.873693743409138</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">major_river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="24" target="25" id="25">
+  <data key="d2">25</data>
+  <data key="d3">845.6596819553549</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="24" target="55" id="79">
+  <data key="d2">79</data>
+  <data key="d3">1344.617728230088</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">major_river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="24" target="39" id="0">
+  <data key="d2">76</data>
+  <data key="d3">6862.798759237321</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">major_river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="25" target="27" id="0">
+  <data key="d2">26</data>
+  <data key="d3">1920.3990431659122</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="27" target="55" id="88">
+  <data key="d2">88</data>
+  <data key="d3">2570.684878750066</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">major_river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="27" target="27" id="89">
+  <data key="d2">89</data>
+  <data key="d3">2.0326669270240716</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">major_river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="28" target="29" id="29">
+  <data key="d2">29</data>
+  <data key="d3">2562.3236830489645</data>
+  <data key="d4">osm</data>
+  <data key="d5">drain</data>
+  <data key="d6"></data>
+</edge>
+<edge source="32" target="33" id="32">
+  <data key="d2">32</data>
+  <data key="d3">1539.7071314867287</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="33" target="34" id="33">
+  <data key="d2">33</data>
+  <data key="d3">487.1309290851976</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="33" target="44" id="0">
+  <data key="d2">49</data>
+  <data key="d3">1192.506986474291</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="33" target="33" id="0">
+  <data key="d2">50</data>
+  <data key="d3">34.49160161748647</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="34" target="38" id="74">
+  <data key="d2">74</data>
+  <data key="d3">2812.2417595198194</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">major_river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="34" target="34" id="0">
+  <data key="d2">35</data>
+  <data key="d3">33.992017401035326</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="34" target="34" id="1">
+  <data key="d2">72</data>
+  <data key="d3">34.161994122354706</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">major_river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="34" target="37" id="0">
+  <data key="d2">34</data>
+  <data key="d3">2392.833411245044</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="37" target="37" id="39">
+  <data key="d2">39</data>
+  <data key="d3">16.511438480449804</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="37" target="37" id="68">
+  <data key="d2">68</data>
+  <data key="d3">17.436159329504445</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">major_river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="37" target="37" id="2">
+  <data key="d2">37</data>
+  <data key="d3">22.871367155886638</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="37" target="37" id="3">
+  <data key="d2">70</data>
+  <data key="d3">25.954813918103344</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">major_river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="37" target="38" id="40">
+  <data key="d2">40</data>
+  <data key="d3">248.99584456304177</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="38" target="39" id="41">
+  <data key="d2">41</data>
+  <data key="d3">41.140865898984266</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="40" target="40" id="44">
+  <data key="d2">44</data>
+  <data key="d3">20.29985739334476</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="40" target="63" id="100">
+  <data key="d2">100</data>
+  <data key="d3">1509.35452162874</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="40" target="42" id="0">
+  <data key="d2">45</data>
+  <data key="d3">138.2525757603319</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="42" target="43" id="47">
+  <data key="d2">47</data>
+  <data key="d3">2080.27204556881</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="42" target="47" id="52">
+  <data key="d2">52</data>
+  <data key="d3">281.5574356501099</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="44" target="44" id="54">
+  <data key="d2">54</data>
+  <data key="d3">36.060193248786085</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="44" target="61" id="96">
+  <data key="d2">96</data>
+  <data key="d3">715.7687684232129</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6">คลองเป็ด</data>
+</edge>
+<edge source="44" target="47" id="0">
+  <data key="d2">48</data>
+  <data key="d3">846.8960141620986</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="47" target="47" id="101">
+  <data key="d2">101</data>
+  <data key="d3">0.3494904963179974</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="47" target="64" id="102">
+  <data key="d2">102</data>
+  <data key="d3">1309.579460245336</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="55" target="56" id="90">
+  <data key="d2">90</data>
+  <data key="d3">568.5467830143251</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">major_river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="56" target="57" id="91">
+  <data key="d2">91</data>
+  <data key="d3">1379.96817132064</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">major_river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="56" target="56" id="129">
+  <data key="d2">129</data>
+  <data key="d3">9.406655342811189e-06</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="56" target="96" id="130">
+  <data key="d2">130</data>
+  <data key="d3">285.18487652900427</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="57" target="58" id="92">
+  <data key="d2">92</data>
+  <data key="d3">334.3992707611596</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">major_river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="57" target="57" id="135">
+  <data key="d2">135</data>
+  <data key="d3">4.69266327282018e-05</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="57" target="103" id="136">
+  <data key="d2">136</data>
+  <data key="d3">1904.2163873708282</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="58" target="58" id="93">
+  <data key="d2">93</data>
+  <data key="d3">1.073736495829419e-05</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">major_river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="58" target="58" id="138">
+  <data key="d2">138</data>
+  <data key="d3">7.310637944439711e-05</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6">คลองยาง</data>
+</edge>
+<edge source="58" target="59" id="94">
+  <data key="d2">94</data>
+  <data key="d3">10044.909042867359</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">major_river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="58" target="105" id="139">
+  <data key="d2">139</data>
+  <data key="d3">1924.830988092183</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6">คลองยาง</data>
+</edge>
+<edge source="60" target="61" id="95">
+  <data key="d2">95</data>
+  <data key="d3">775.6029473308063</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="61" target="62" id="97">
+  <data key="d2">97</data>
+  <data key="d3">516.4874375282176</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6">คลองเป็ด</data>
+</edge>
+<edge source="65" target="66" id="103">
+  <data key="d2">103</data>
+  <data key="d3">189.45276569052191</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="67" target="68" id="104">
+  <data key="d2">104</data>
+  <data key="d3">1421.1618276798717</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6">คลองสะลุ</data>
+</edge>
+<edge source="69" target="70" id="105">
+  <data key="d2">105</data>
+  <data key="d3">3347.3020533476733</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="71" target="72" id="106">
+  <data key="d2">106</data>
+  <data key="d3">191.8321196833576</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="71" target="73" id="107">
+  <data key="d2">107</data>
+  <data key="d3">1708.694748392039</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="71" target="76" id="0">
+  <data key="d2">108</data>
+  <data key="d3">3403.930648191715</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="77" target="78" id="111">
+  <data key="d2">111</data>
+  <data key="d3">2422.1181142761343</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="80" target="80" id="0">
+  <data key="d2">113</data>
+  <data key="d3">12.184046169152202</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="80" target="85" id="0">
+  <data key="d2">112</data>
+  <data key="d3">2830.3700620307427</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="84" target="86" id="0">
+  <data key="d2">115</data>
+  <data key="d3">5039.139433960175</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6">คลองคู</data>
+</edge>
+<edge source="86" target="87" id="118">
+  <data key="d2">118</data>
+  <data key="d3">4738.6095052732435</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6">คลองแหลมคก</data>
+</edge>
+<edge source="86" target="104" id="137">
+  <data key="d2">137</data>
+  <data key="d3">3059.872603238403</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6">คลองละคร</data>
+</edge>
+<edge source="87" target="90" id="121">
+  <data key="d2">121</data>
+  <data key="d3">801.7097127564898</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="87" target="94" id="0">
+  <data key="d2">123</data>
+  <data key="d3">2185.649441913096</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6">คลองแหลมคก</data>
+</edge>
+<edge source="99" target="100" id="0">
+  <data key="d2">131</data>
+  <data key="d3">2471.681517001977</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="101" target="102" id="134">
+  <data key="d2">134</data>
+  <data key="d3">739.8031702014488</data>
+  <data key="d4">mitrearth_supplement</data>
+  <data key="d5">minor_stream</data>
+  <data key="d6"></data>
+</edge>
+</graph></graphml>

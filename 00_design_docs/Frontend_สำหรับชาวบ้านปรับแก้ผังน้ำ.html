@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบจัดทำผังน้ำชุมชน - Interactive Canvas</title>
+    <!-- นำเข้า Cytoscape.js สำหรับวาดกราฟ -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.26.0/cytoscape.min.js"></script>
+    <style>
+        body { font-family: 'Sarabun', sans-serif; margin: 0; padding: 0; display: flex; height: 100vh; background-color: #f0f2f5; }
+        #sidebar { width: 300px; background: #fff; padding: 20px; box-shadow: 2px 0 5px rgba(0,0,0,0.1); z-index: 10; display: flex; flex-direction: column; }
+        #cy { flex-grow: 1; position: relative; }
+        h2 { color: #0056b3; font-size: 18px; text-align: center; border-bottom: 2px solid #0056b3; padding-bottom: 10px;}
+        .tool-btn { 
+            background: #fff; border: 1px solid #ccc; padding: 10px; margin-bottom: 10px; 
+            border-radius: 5px; cursor: pointer; display: flex; align-items: center; transition: 0.2s;
+        }
+        .tool-btn:hover { background: #e9ecef; border-color: #0056b3; }
+        .tool-btn.active { background: #cce5ff; border-color: #0056b3; font-weight: bold; }
+        .icon { width: 24px; height: 24px; margin-right: 10px; display: inline-block; background-size: contain; background-repeat: no-repeat; }
+        
+        /* สัญลักษณ์จำลองตามมาตรฐาน สสน. */
+        .icon-gate { background-color: black; clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); } /* ปตร. (ปัจจุบัน) */
+        .icon-weir { background-color: black; height: 12px; margin-top: 6px; } /* ฝาย (ปัจจุบัน) */
+        .icon-reservoir { background-color: black; clip-path: polygon(50% 0%, 0% 100%, 100% 100%); } /* อ่างเก็บน้ำ */
+        
+        #instruction { margin-top: 20px; font-size: 14px; color: #666; background: #f8f9fa; padding: 10px; border-radius: 5px;}
+    </style>
+</head>
+<body>
+
+    <div id="sidebar">
+        <h2>เครื่องมือปรับปรุงผังน้ำ</h2>
+        <p style="font-size: 14px; color: #555;">เลือกโครงสร้างแล้วคลิกที่เส้นคลองเพื่อวาง</p>
+        
+        <button class="tool-btn" onclick="selectTool('gate', this)">
+            <span class="icon icon-gate"></span> เพิ่ม ปตร. (Gate)
+        </button>
+        <button class="tool-btn" onclick="selectTool('weir', this)">
+            <span class="icon icon-weir"></span> เพิ่ม ฝาย (Weir)
+        </button>
+        <button class="tool-btn" onclick="selectTool('reservoir', this)">
+            <span class="icon icon-reservoir"></span> เพิ่ม อ่างเก็บน้ำ
+        </button>
+        
+        <div id="instruction">
+            <strong>สถานะปัจจุบัน:</strong> <span id="current-tool">ดูผังน้ำ (View)</span><br><br>
+            ระบบจะแปลงเส้นลำน้ำให้เป็นเส้นตรงแนวดิ่ง/นอน (Orthogonal) อัตโนมัติ เพื่อให้อ่านทิศทางการไหลได้ง่าย
+        </div>
+        
+        <button style="margin-top: auto; padding: 10px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer;" onclick="exportData()">
+            บันทึกและอัปเดตข้อมูล (Export)
+        </button>
+    </div>
+
+    <div id="cy"></div>
+
+    <script>
+        let currentTool = null;
+
+        function selectTool(tool, element) {
+            currentTool = tool;
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            element.classList.add('active');
+            let toolName = tool === 'gate' ? 'ปตร.' : tool === 'weir' ? 'ฝาย' : 'อ่างเก็บน้ำ';
+            document.getElementById('current-tool').innerText = 'เตรียมวาง ' + toolName;
+        }
+
+        // สร้างข้อมูลกราฟจำลอง (เสมือนรับมาจาก Python Backend)
+        const initialElements = [
+            // Nodes (จุดตัด/จุดกำเนิดลำน้ำ)
+            { data: { id: 'n1', label: 'ต้นน้ำ' }, position: { x: 300, y: 50 } },
+            { data: { id: 'n2', label: 'จุดตัด 1' }, position: { x: 300, y: 200 } },
+            { data: { id: 'n3', label: 'ปลายน้ำ 1' }, position: { x: 300, y: 500 } },
+            { data: { id: 'n4', label: 'ต้นน้ำสาขา' }, position: { x: 600, y: 200 } },
+            { data: { id: 'n5', label: 'จุดตัด 2' }, position: { x: 300, y: 350 } },
+            { data: { id: 'n6', label: 'ปลายน้ำสาขา' }, position: { x: 100, y: 350 } },
+            // Edges (เส้นลำน้ำ)
+            { data: { id: 'e1', source: 'n1', target: 'n2', label: 'แม่น้ำสายหลัก', type: 'main' } },
+            { data: { id: 'e2', source: 'n2', target: 'n5', label: 'แม่น้ำสายหลัก', type: 'main' } },
+            { data: { id: 'e3', source: 'n5', target: 'n3', label: 'แม่น้ำสายหลัก', type: 'main' } },
+            { data: { id: 'e4', source: 'n4', target: 'n2', label: 'คลองสาขา', type: 'branch' } },
+            { data: { id: 'e5', source: 'n5', target: 'n6', label: 'คลองสาขา', type: 'branch' } }
+        ];
+
+        // ตั้งค่า Cytoscape
+        const cy = cytoscape({
+            container: document.getElementById('cy'),
+            elements: initialElements,
+            style: [
+                {
+                    selector: 'node',
+                    style: {
+                        'background-color': '#007bff',
+                        'label': 'data(label)',
+                        'font-family': 'Sarabun',
+                        'font-size': '12px',
+                        'text-valign': 'top',
+                        'text-margin-y': -5,
+                        'width': 10,
+                        'height': 10
+                    }
+                },
+                {
+                    selector: 'edge',
+                    style: {
+                        'width': 4,
+                        'line-color': '#4da6ff',
+                        'target-arrow-color': '#4da6ff',
+                        'target-arrow-shape': 'triangle',
+                        'curve-style': 'taxi', /* บังคับเส้นให้เป็นเส้นตรงแนวตั้ง-นอน (Orthogonal Layout) */
+                        'taxi-direction': 'downward',
+                        'label': 'data(label)',
+                        'font-size': '10px',
+                        'text-rotation': 'autorotate',
+                        'text-margin-y': -10
+                    }
+                },
+                {
+                    selector: 'edge[type="main"]',
+                    style: { 'width': 6, 'line-color': '#0056b3', 'target-arrow-color': '#0056b3' }
+                },
+                // Style สัญลักษณ์ตามมาตรฐาน สสน.
+                {
+                    selector: 'node[type="gate"]',
+                    style: { 'shape': 'diamond', 'background-color': 'black', 'width': 25, 'height': 25 } // ปตร. (สี่เหลี่ยมขนมเปียกปูน)
+                },
+                {
+                    selector: 'node[type="weir"]',
+                    style: { 'shape': 'rectangle', 'background-color': 'black', 'width': 30, 'height': 10 } // ฝาย (สี่เหลี่ยมผืนผ้าขวาง)
+                },
+                {
+                    selector: 'node[type="reservoir"]',
+                    style: { 'shape': 'triangle', 'background-color': 'black', 'width': 30, 'height': 30 } // อ่างเก็บน้ำ (สามเหลี่ยม)
+                }
+            ],
+            layout: { name: 'preset' } // ใช้ตำแหน่งที่กำหนดไว้
+        });
+
+        // ฟังก์ชันลากวาง: คลิกที่เส้นลำน้ำเพื่อวางโครงสร้าง
+        let nodeCount = 10;
+        cy.on('tap', 'edge', function(evt){
+            if (!currentTool) return;
+            
+            let edge = evt.target;
+            let sourceId = edge.data('source');
+            let targetId = edge.data('target');
+            let edgeType = edge.data('type');
+            
+            // ตำแหน่งที่คลิกบนเส้น
+            let pos = evt.position;
+            
+            // สร้าง Node ใหม่ตามเครื่องมือที่เลือก (ปตร., ฝาย, อ่างฯ)
+            let newNodeId = 'newNode_' + nodeCount++;
+            let labelName = currentTool === 'gate' ? 'ปตร.ใหม่' : currentTool === 'weir' ? 'ฝายใหม่' : 'อ่างฯ ใหม่';
+            
+            cy.add({
+                group: 'nodes',
+                data: { id: newNodeId, label: labelName, type: currentTool },
+                position: pos
+            });
+
+            // Split Line (ตัดเส้นคลองเดิมออกเป็น 2 ท่อน)
+            cy.remove(edge);
+            cy.add([
+                { group: 'edges', data: { id: 'e_split1_' + nodeCount, source: sourceId, target: newNodeId, type: edgeType } },
+                { group: 'edges', data: { id: 'e_split2_' + nodeCount, source: newNodeId, target: targetId, type: edgeType } }
+            ]);
+
+            // รีเซ็ตเครื่องมือ
+            currentTool = null;
+            document.querySelectorAll('.tool-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('current-tool').innerText = 'ดูผังน้ำ (View)';
+        });
+
+        function exportData() {
+            // ดึงข้อมูล JSON ของกราฟปัจจุบันเพื่อส่งกลับไปให้ Backend (Python) อัปเดตพิกัด GIS
+            let exportedJSON = cy.json();
+            alert("บันทึกข้อมูลเรียบร้อย!\n(ข้อมูล JSON ถูกสร้างขึ้นแล้ว สามารถตรวจสอบใน Console)");
+            console.log(JSON.stringify(exportedJSON.elements, null, 2));
+        }
+    </script>
+</body>
+</html>

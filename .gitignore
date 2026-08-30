@@ -1,0 +1,8 @@
+# bytecode
+__pycache__/
+*.pyc
+
+# เอกสารภายในเกี่ยวกับโปรเจกต์ Supabase ที่ใช้ร่วมกับระบบอื่น (มี "real users" ของทีมอื่นอยู่)
+# ไม่ใส่ในไฟล์ public แม้จะไม่มี secret ฝังอยู่ก็ตาม — เป็นมารยาทกับทีมที่ใช้ระบบร่วมกัน
+00_design_docs/SHARED_SUPABASE_PROJECT_RULES.md
+

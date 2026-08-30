@@ -1,0 +1,294 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d6" for="edge" attr.name="name" attr.type="string"/>
+<key id="d5" for="edge" attr.name="waterway_tag" attr.type="string"/>
+<key id="d4" for="edge" attr.name="source" attr.type="string"/>
+<key id="d3" for="edge" attr.name="length_m" attr.type="double"/>
+<key id="d2" for="edge" attr.name="edge_id" attr.type="long"/>
+<key id="d1" for="node" attr.name="y" attr.type="double"/>
+<key id="d0" for="node" attr.name="x" attr.type="double"/>
+<graph edgedefault="undirected"><node id="0">
+  <data key="d0">641722.3130569321</data>
+  <data key="d1">1844367.0968563918</data>
+</node>
+<node id="2">
+  <data key="d0">641545.7880492273</data>
+  <data key="d1">1826744.0533231802</data>
+</node>
+<node id="3">
+  <data key="d0">644012.5625868273</data>
+  <data key="d1">1835200.568215938</data>
+</node>
+<node id="4">
+  <data key="d0">642013.0938258824</data>
+  <data key="d1">1836379.9086239545</data>
+</node>
+<node id="6">
+  <data key="d0">639425.1307059943</data>
+  <data key="d1">1836288.7419496004</data>
+</node>
+<node id="7">
+  <data key="d0">639489.1215661326</data>
+  <data key="d1">1835327.1709713463</data>
+</node>
+<node id="8">
+  <data key="d0">638830.1165148112</data>
+  <data key="d1">1834265.409276926</data>
+</node>
+<node id="10">
+  <data key="d0">645969.3027682893</data>
+  <data key="d1">1838157.5163048843</data>
+</node>
+<node id="12">
+  <data key="d0">642926.8570570874</data>
+  <data key="d1">1833577.009609233</data>
+</node>
+<node id="13">
+  <data key="d0">642770.9822176701</data>
+  <data key="d1">1834437.6083420517</data>
+</node>
+<node id="15">
+  <data key="d0">642823.6124438543</data>
+  <data key="d1">1835424.966272548</data>
+</node>
+<node id="16">
+  <data key="d0">643592.1747611148</data>
+  <data key="d1">1835024.684264783</data>
+</node>
+<node id="17">
+  <data key="d0">642483.7169926502</data>
+  <data key="d1">1833109.8772693262</data>
+</node>
+<node id="18">
+  <data key="d0">643297.4856604249</data>
+  <data key="d1">1832853.8367742652</data>
+</node>
+<node id="19">
+  <data key="d0">648521.3235523872</data>
+  <data key="d1">1842679.5005366008</data>
+</node>
+<node id="20">
+  <data key="d0">647203.4567060205</data>
+  <data key="d1">1842376.2371172607</data>
+</node>
+<node id="21">
+  <data key="d0">645521.5609742149</data>
+  <data key="d1">1842580.9008165838</data>
+</node>
+<node id="22">
+  <data key="d0">645597.8604331801</data>
+  <data key="d1">1842716.197355992</data>
+</node>
+<node id="23">
+  <data key="d0">644485.495354962</data>
+  <data key="d1">1843987.546550689</data>
+</node>
+<node id="24">
+  <data key="d0">646338.2533844953</data>
+  <data key="d1">1842864.455387818</data>
+</node>
+<node id="27">
+  <data key="d0">646335.3399394851</data>
+  <data key="d1">1842900.3976940226</data>
+</node>
+<node id="28">
+  <data key="d0">639614.8893230816</data>
+  <data key="d1">1835380.439243899</data>
+</node>
+<node id="31">
+  <data key="d0">638882.0444050923</data>
+  <data key="d1">1839574.8215263933</data>
+</node>
+<node id="32">
+  <data key="d0">643796.2538973133</data>
+  <data key="d1">1842191.5313288714</data>
+</node>
+<edge source="0" target="4" id="0">
+  <data key="d2">0</data>
+  <data key="d3">17211.433761407257</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6">แคววังทอง</data>
+</edge>
+<edge source="2" target="3" id="1">
+  <data key="d2">1</data>
+  <data key="d3">12884.813044396213</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6">แคววังทอง</data>
+</edge>
+<edge source="3" target="4" id="2">
+  <data key="d2">2</data>
+  <data key="d3">2610.985576540357</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6">แคววังทอง</data>
+</edge>
+<edge source="3" target="10" id="0">
+  <data key="d2">10</data>
+  <data key="d3">5987.0597680003375</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="4" target="28" id="0">
+  <data key="d2">8</data>
+  <data key="d3">3864.3966575264544</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="6" target="7" id="5">
+  <data key="d2">5</data>
+  <data key="d3">1804.6783810733882</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="6" target="28" id="0">
+  <data key="d2">4</data>
+  <data key="d3">966.1477030330548</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="6" target="6" id="0">
+  <data key="d2">33</data>
+  <data key="d3">9.972924791905005</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="6" target="6" id="1">
+  <data key="d2">28</data>
+  <data key="d3">12.090725724972945</data>
+  <data key="d4">osm</data>
+  <data key="d5">stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="6" target="6" id="2">
+  <data key="d2">30</data>
+  <data key="d3">12.401560578790964</data>
+  <data key="d4">osm</data>
+  <data key="d5">stream</data>
+  <data key="d6"></data>
+</edge>
+<edge source="6" target="31" id="0">
+  <data key="d2">26</data>
+  <data key="d3">5577.567324751782</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="7" target="8" id="6">
+  <data key="d2">6</data>
+  <data key="d3">1535.088075901585</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="7" target="28" id="25">
+  <data key="d2">25</data>
+  <data key="d3">146.31803785061112</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="10" target="20" id="15">
+  <data key="d2">15</data>
+  <data key="d3">5247.238060760344</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="10" target="32" id="0">
+  <data key="d2">7</data>
+  <data key="d3">15476.262293833686</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="10" target="10" id="0">
+  <data key="d2">35</data>
+  <data key="d3">13.986263083615254</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="12" target="13" id="9">
+  <data key="d2">9</data>
+  <data key="d3">1165.3879068765036</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="12" target="17" id="12">
+  <data key="d2">12</data>
+  <data key="d3">697.7632645898358</data>
+  <data key="d4">osm</data>
+  <data key="d5">drain</data>
+  <data key="d6"></data>
+</edge>
+<edge source="12" target="18" id="13">
+  <data key="d2">13</data>
+  <data key="d3">992.7079286445802</data>
+  <data key="d4">osm</data>
+  <data key="d5">drain</data>
+  <data key="d6"></data>
+</edge>
+<edge source="15" target="16" id="11">
+  <data key="d2">11</data>
+  <data key="d3">2562.3236830489645</data>
+  <data key="d4">osm</data>
+  <data key="d5">drain</data>
+  <data key="d6"></data>
+</edge>
+<edge source="19" target="20" id="14">
+  <data key="d2">14</data>
+  <data key="d3">1539.7071314867287</data>
+  <data key="d4">osm</data>
+  <data key="d5">river</data>
+  <data key="d6"></data>
+</edge>
+<edge source="20" target="24" id="0">
+  <data key="d2">20</data>
+  <data key="d3">1192.506986474291</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="20" target="20" id="0">
+  <data key="d2">21</data>
+  <data key="d3">34.49160161748647</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="21" target="22" id="17">
+  <data key="d2">17</data>
+  <data key="d3">158.55243315367665</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="22" target="23" id="18">
+  <data key="d2">18</data>
+  <data key="d3">2080.27204556881</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="22" target="24" id="0">
+  <data key="d2">19</data>
+  <data key="d3">1128.4534498122084</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+<edge source="24" target="27" id="24">
+  <data key="d2">24</data>
+  <data key="d3">36.060193248786085</data>
+  <data key="d4">osm</data>
+  <data key="d5">canal</data>
+  <data key="d6"></data>
+</edge>
+</graph></graphml>
