@@ -19,10 +19,24 @@ API ตรง ๆ ไม่ได้ (บล็อกด้วย allowlist เ�
 
 import argparse
 import json
+import socket
 import sys
 
 import geopandas as gpd
 import requests
+import urllib3.util.connection as _urllib3_cn
+
+# --- แก้ "Network is unreachable" (errno 101) เมื่อเรียก overpass-api.de จาก Render ---
+# ยืนยันจาก Render log จริง: การเชื่อมต่อ overpass-api.de ล้มเหลวทันที (ไม่ใช่ timeout) ด้วย
+# "[Errno 101] Network is unreachable" — เป็นอาการมาตรฐานของ container ที่ไม่มี IPv6 route
+# แต่ DNS ของโดเมนคืนทั้ง A (IPv4) และ AAAA (IPv6) record มาด้วย ทำให้ urllib3 (ที่ requests ใช้
+# ข้างใน) พยายามต่อผ่าน IPv6 ก่อนตามลำดับที่ getaddrinfo() คืนมา แล้วล้มเหลวทันทีโดยไม่ retry เป็น
+# IPv4 เอง — บังคับให้ resolve เป็น IPv4 (AF_INET) อย่างเดียวเพื่อเลี่ยงปัญหานี้
+def _allowed_gai_family_ipv4_only():
+    return socket.AF_INET
+
+
+_urllib3_cn.allowed_gai_family = _allowed_gai_family_ipv4_only
 
 OVERPASS_ENDPOINTS = [
     "https://overpass-api.de/api/interpreter",
