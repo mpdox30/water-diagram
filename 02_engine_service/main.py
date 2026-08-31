@@ -82,6 +82,15 @@ def _run_step(args, cwd):
         text=True,
         timeout=600,
     )
+    # พิมพ์ stdout/stderr ของทุกขั้นตอนเสมอ (ไม่ใช่แค่ตอน exit code ไม่ใช่ 0) ไปที่ stderr ของ service เอง —
+    # ก่อนหน้านี้ print() ของแต่ละ phase (เช่น จำนวน mitrearth ที่ดึงจาก Supabase ใน 01_data_ingestion.py หรือ
+    # สถิติทิศทางการไหลใน 02b_flow_direction.py) ถูกกลืนหายไปเงียบ ๆ เมื่อขั้นตอนนั้นสำเร็จ (return code 0) ทำให้
+    # ตรวจสอบผลจริงจาก Render Logs ไม่ได้เลยถ้าไม่ได้ error — เพิ่งเจอเองตอนเช็ค log การรัน Phase 2b ครั้งแรก
+    step_name = Path(args[0]).name
+    if result.stdout.strip():
+        print(f"[{step_name}] stdout:\n{result.stdout.strip()}", file=sys.stderr)
+    if result.stderr.strip():
+        print(f"[{step_name}] stderr:\n{result.stderr.strip()}", file=sys.stderr)
     if result.returncode != 0:
         raise HTTPException(
             status_code=500,
