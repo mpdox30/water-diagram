@@ -150,6 +150,7 @@ def _run_engine_pipeline(req: RunEngineRequest):
             tmp = Path(tmp)
             phase1_dir = tmp / "phase1"
             phase2_dir = tmp / "phase2"
+            phase2b_dir = tmp / "phase2b"
             phase3_dir = tmp / "phase3"
             out_js = tmp / "output.js"
 
@@ -182,9 +183,19 @@ def _run_engine_pipeline(req: RunEngineRequest):
                 "--out-dir", str(phase2_dir),
             ], cwd=ENGINE_DIR)
 
+            # Phase 2b (Task #24, 2026-08-31): กำหนดทิศทางการไหล (u=ต้นน้ำ/สูงกว่า, v=ปลายน้ำ/ต่ำกว่า) จาก DEM
+            # point-elevation sampling (OpenTopography API, env var OPENTOPOGRAPHY_API_KEY) — ถ้ายังไม่ได้ตั้งค่า
+            # API key หรือเรียก DEM ไม่สำเร็จ จะส่งผลลัพธ์ Phase 2 ผ่านไปเฉย ๆ (u/v เดิม) ไม่ทำให้ pipeline ล้มเหลว
+            # ดูรายละเอียดใน docstring ของ 02b_flow_direction.py
+            _run_step([
+                str(ENGINE_DIR / "02b_flow_direction.py"),
+                "--phase2-dir", str(phase2_dir),
+                "--out-dir", str(phase2b_dir),
+            ], cwd=ENGINE_DIR)
+
             _run_step([
                 str(ENGINE_DIR / "03_schematic_layout.py"),
-                "--phase2-dir", str(phase2_dir),
+                "--phase2-dir", str(phase2b_dir),
                 "--out-dir", str(phase3_dir),
             ], cwd=ENGINE_DIR)
 
