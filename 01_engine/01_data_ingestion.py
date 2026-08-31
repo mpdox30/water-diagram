@@ -240,6 +240,21 @@ def _bbox_wgs84_from_boundary(boundary_buffered: gpd.GeoSeries):
     return south, west, north, east
 
 
+def _unwrap_single_part(geom):
+    """Supabase เก็บ geometry ของ mitrearth เป็น Multi* เสมอ (คอลัมน์ nw.mitrearth_waterways/water_bodies
+    ประกาศเป็น MultiLineString/MultiPolygon แล้วห่อ ST_Multi() ตอน import แม้ต้นทางจะเป็นเส้น/รูปเดี่ยวก็ตาม)
+    แต่ downstream ทั้งหมด (ส่วนที่เหลือของ Phase 1 นี้ + 02_topology_graph.py + 04_export_frontend_data.py)
+    เขียนขึ้นมาโดยสมมติว่าเป็น geometry เดี่ยว (LineString/Polygon) เหมือนตอนอ่านจาก shapefile ในเครื่องเดิม
+    (shapefile line/polygon layer ให้ geometry เดี่ยวต่อแถวเสมอ) — พบบั๊กจริงจาก Render log (แม่นาเรือ,
+    2026-08-31): geom.coords raise NotImplementedError เพราะเจอ MultiLineString ที่ไม่เคยเจอมาก่อนตอนอ่านจาก
+    ไฟล์ในเครื่อง — แกะ Multi* ที่มี part เดียว (กรณีปกติเกือบทั้งหมด เพราะ ST_Multi ห่อเส้นเดี่ยวไว้) กลับเป็น
+    geometry เดี่ยวตรงนี้ที่เดียว กันไม่ให้ต้องแก้โค้ด downstream หลายไฟล์ — ถ้ามีมากกว่า 1 part จริง ๆ (ไม่เคย
+    เจอจากข้อมูลชุดนี้) ปล่อยเป็น Multi* ตามเดิม (ให้ error ชัดเจนกว่าพยายามรวม part แบบเดาเอา)"""
+    if geom.geom_type.startswith("Multi") and len(geom.geoms) == 1:
+        return geom.geoms[0]
+    return geom
+
+
 def _call_mitrearth_rpc(rpc_name: str, bbox):
     south, west, north, east = bbox
     resp = requests.post(
@@ -270,7 +285,7 @@ def load_mitrearth_from_supabase(boundary_buffered: gpd.GeoSeries):
     waterway_rows = _call_mitrearth_rpc("nw_mitrearth_waterways_in_bbox", bbox)
     major_rows, minor_rows = [], []
     for r in waterway_rows:
-        geom = shapely.geometry.shape(json.loads(r["geom_geojson"]))
+        geom = _unwrap_single_part(shapely.geometry.shape(json.loads(r["geom_geojson"])))
         row = dict(r.get("source_attrs") or {})
         row["geometry"] = geom
         if r["feature_type"] == "major_river":
@@ -281,7 +296,7 @@ def load_mitrearth_from_supabase(boundary_buffered: gpd.GeoSeries):
     body_rows_raw = _call_mitrearth_rpc("nw_mitrearth_water_bodies_in_bbox", bbox)
     body_rows = []
     for r in body_rows_raw:
-        geom = shapely.geometry.shape(json.loads(r["geom_geojson"]))
+        geom = _unwrap_single_part(shapely.geometry.shape(json.loads(r["geom_geojson"])))
         row = dict(r.get("source_attrs") or {})
         row["geometry"] = geom
         body_rows.append(row)
@@ -415,7 +430,20 @@ def drop_closed_ring_lines(lines_gdf: gpd.GeoDataFrame):
     def _is_ring(geom):
         if geom is None or geom.is_empty:
             return False
-        coords = list(geom.coords)
+        # แก้บั๊ก (2026-08-31 พบจาก Render log จริงตอนรัน แม่นาเรือ): geom.coords ใช้ได้เฉพาะ geometry เดี่ยว
+        # (LineString) — ตั้งแต่เปลี่ยนมาอ่าน mitrearth จาก Supabase (Task #21) ทุกเส้นเป็น MultiLineString
+        # เสมอ (เพราะตาราง nw.mitrearth_waterways ประกาศคอลัมน์เป็น geometry(MultiLineString,4326) แล้วห่อ
+        # ST_Multi() ตอน import แม้จะเป็นเส้นเดี่ยวเดิมก็ตาม) เรียก .coords ตรง ๆ กับ MultiLineString จึง raise
+        # NotImplementedError — กรณีปกติ (เส้นเดี่ยวที่ถูกห่อ Multi ไว้) แกะออกมาดู part เดียวได้ตามเดิม ส่วนกรณี
+        # ที่มีมากกว่า 1 part จริง ๆ (ไม่เคยเจอจากข้อมูลชุดนี้ แต่เผื่อไว้) ถือว่าไม่ใช่วงปิดแบบเรียบง่าย ไม่ตัดทิ้ง
+        # (ปลอดภัยกว่าการเดา/ตัดทิ้งผิด)
+        if geom.geom_type.startswith("Multi"):
+            parts = list(geom.geoms)
+            if len(parts) != 1:
+                return False
+            coords = list(parts[0].coords)
+        else:
+            coords = list(geom.coords)
         return len(coords) >= 2 and coords[0] == coords[-1]
 
     is_ring = lines_gdf.geometry.apply(_is_ring)
