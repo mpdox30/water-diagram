@@ -23,8 +23,16 @@ property "waterway" เก็บ tag เดิมจาก OSM (river/canal/stre
 หน้าที่ของไฟล์นี้: รับชื่อ (จังหวัด, อำเภอ, ตำบล) + ไฟล์ OSM waterway ที่เตรียมไว้ แล้วรวมกับข้อมูลทางน้ำดิบระดับ
 จังหวัด (จาก mitrearth surface water package, ใช้เป็นตัวเติมเสริมเท่านั้น) ที่อยู่ในเขต/รอบขอบเขตตำบลนั้น
 ออกมาเป็น GeoDataFrame พร้อมสำหรับขั้นตอนถัดไป (Phase 2: topology graph construction) — **ไม่มีการ hardcode
-ชื่อเฉพาะตำบล/เส้นทางน้ำใด ๆ ในไฟล์นี้เลย** ใช้ได้กับทุกตำบลในประเทศไทยที่มีข้อมูลจังหวัดนั้นอยู่ใน
-01_data_raw/provincial_gis/ (ส่วนไฟล์ OSM ต้องเตรียมแยกทีละตำบลตามข้อจำกัดด้านบน)
+ชื่อเฉพาะตำบล/เส้นทางน้ำใด ๆ ในไฟล์นี้เลย** ใช้ได้กับทุกตำบลในประเทศไทยที่มีข้อมูล mitrearth อยู่ (ส่วนไฟล์ OSM
+ต้องเตรียมแยกทีละตำบลตามข้อจำกัดด้านบน)
+
+**อัปเดต Task #21 (2026-08-31)**: ข้อมูลเสริม mitrearth ตอนนี้ดึงจาก **Supabase** เป็นหลัก (ตาราง
+nw.mitrearth_waterways/nw.mitrearth_water_bodies ผ่าน RPC nw_mitrearth_waterways_in_bbox/
+nw_mitrearth_water_bodies_in_bbox — นำเข้าครบทั้ง 77 จังหวัดแล้วผ่าน import_mitrearth_all_provinces.py ที่ Ton
+รันเองบนเครื่อง) แทนการอ่าน provincial_gis/<n>_<slug>/surface_water/ ในเครื่อง ซึ่งเดิม bundle ไว้ในโปรเจกต์ได้
+แค่บางจังหวัดเท่านั้น (ข้อมูลทั้งประเทศใหญ่เกินจะ commit เข้า repo ไหว) — โฟลเดอร์ provincial_gis ในเครื่อง (ที่
+อธิบายไว้ด้านล่าง) ตอนนี้เป็นแค่ fallback เผื่อไม่ได้ตั้งค่า SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY หรือเรียก
+Supabase ไม่สำเร็จเท่านั้น (ดูฟังก์ชัน load_mitrearth_from_supabase() และ ingest())
 
 ข้อมูลดิบที่ใช้ (ทั้งหมดอยู่ใน ARCHIVE_pilot_v1_offline_pipeline/01_data_raw/ ยกเว้น OSM):
 - admin_boundary/THA_Tambon.shp   — ขอบเขตตำบลทั่วประเทศ (CRS: EPSG:32647, มี .prj ถูกต้อง)
@@ -46,14 +54,26 @@ property "waterway" เก็บ tag เดิมจาก OSM (river/canal/stre
 ใช้ encoding ต่างออกไป (เช่น cp874 จริง ๆ) ต้องปรับ logic ตรงนี้ให้ตรวจสอบอัตโนมัติแทนการ hardcode "utf-8" เสมอ
 """
 import argparse
+import json
 import os
 import sys
 import unicodedata
 
 import geopandas as gpd
 import pandas as pd
+import requests
+import shapely.geometry
 
 DATA_RAW_ENCODING = "utf-8"  # ดูหมายเหตุ encoding ด้านบน
+
+# Task #21 (2026-08-31): อ่านข้อมูลเสริม mitrearth จาก Supabase (ตาราง nw.mitrearth_waterways/water_bodies ที่
+# นำเข้าครบทั้ง 77 จังหวัดแล้ว ผ่าน import_mitrearth_all_provinces.py) แทนการอ่าน shapefile ที่ bundle ไว้ใน
+# เครื่อง (ซึ่งมีแค่บางจังหวัด เพราะข้อมูลทั้งประเทศใหญ่เกินจะ commit เข้า repo ได้จริง — ดู ADR-003/ADR-004)
+# อ่านค่าจาก env var เดียวกับที่ 02_engine_service/main.py ใช้อยู่แล้ว (subprocess สืบทอด env จาก process แม่
+# โดย default จึงเห็นค่าเดียวกันอัตโนมัติเวลารันจริงบน Render) ถ้ายังไม่ตั้งค่าไว้ (เช่น รันทดสอบในเครื่อง dev ที่
+# ไม่มี Supabase credential พร้อม) จะ fallback ไปอ่านจากโฟลเดอร์ provincial_gis ในเครื่องแทนโดยอัตโนมัติ (ดู ingest())
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "").rstrip("/")
+SUPABASE_SERVICE_ROLE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 
 # ค่าพารามิเตอร์ตรวจจับ "เส้น mitrearth ที่ซ้ำกับ OSM แล้ว" — เลือกจากการทดสอบจริงกับตำบลนำร่อง (นครป่าหมาก):
 # ที่ D=30ม./threshold=0.7 ได้ผลแบ่งกลุ่มชัดเจนที่สุด (47 เส้นถือว่า "มีใน OSM แล้ว" คลุมมากกว่า 70% ของความยาว,
@@ -212,6 +232,69 @@ def load_surface_water(province_folder: str, province_code_prefix: str):
     return major, minor, body
 
 
+def _bbox_wgs84_from_boundary(boundary_buffered: gpd.GeoSeries):
+    """คืนค่า (south, west, north, east) ของขอบเขต boundary_buffered (EPSG:32647) แปลงเป็น EPSG:4326 —
+    RPC bbox ฝั่ง Supabase ใช้ ST_MakeEnvelope กับพิกัด lon/lat (EPSG:4326) เสมอ"""
+    wgs84 = boundary_buffered.to_crs("EPSG:4326")
+    west, south, east, north = wgs84.total_bounds
+    return south, west, north, east
+
+
+def _call_mitrearth_rpc(rpc_name: str, bbox):
+    south, west, north, east = bbox
+    resp = requests.post(
+        f"{SUPABASE_URL}/rest/v1/rpc/{rpc_name}",
+        headers={
+            "apikey": SUPABASE_SERVICE_ROLE_KEY,
+            "Authorization": f"Bearer {SUPABASE_SERVICE_ROLE_KEY}",
+            "Content-Type": "application/json",
+        },
+        json={"p_south": south, "p_west": west, "p_north": north, "p_east": east},
+        timeout=30,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def load_mitrearth_from_supabase(boundary_buffered: gpd.GeoSeries):
+    """ดึงข้อมูลเสริม mitrearth (waterway/water body) จาก Supabase แทนการอ่าน shapefile ในเครื่อง — ใช้ RPC
+    nw_mitrearth_waterways_in_bbox / nw_mitrearth_water_bodies_in_bbox (bbox-filtered, SECURITY DEFINER จำกัด
+    สิทธิ์ไว้เฉพาะ service_role เท่านั้น — ดู migration add_source_attrs_to_mitrearth_bbox_rpcs_v2) ดึงเฉพาะข้อมูล
+    ในกรอบ bbox ของตำบล (+buffer) ที่กำลังประมวลผลอยู่ ไม่ใช่ทั้งจังหวัด — คืนค่ารูปแบบเดียวกับ load_surface_water():
+    (major_river_gdf, minor_stream_gdf, water_body_gdf) ทั้งหมดใน EPSG:32647 พร้อม source_attrs (HY_LNAME,
+    str_name_t ฯลฯ) แตกเป็นคอลัมน์ระดับบนให้ classify_waterway_sources()/_clean_possibly_truncated_mitrearth_name()
+    เดิมใช้งานได้ทันทีโดยไม่ต้องแก้โค้ดส่วนนั้นเลย — raise exception ถ้าเรียก Supabase ไม่สำเร็จ (ให้ ingest()
+    เป็นคนตัดสินใจ fallback เอง ไม่กลืน error เงียบ ๆ ตรงนี้)"""
+    bbox = _bbox_wgs84_from_boundary(boundary_buffered)
+
+    waterway_rows = _call_mitrearth_rpc("nw_mitrearth_waterways_in_bbox", bbox)
+    major_rows, minor_rows = [], []
+    for r in waterway_rows:
+        geom = shapely.geometry.shape(json.loads(r["geom_geojson"]))
+        row = dict(r.get("source_attrs") or {})
+        row["geometry"] = geom
+        if r["feature_type"] == "major_river":
+            major_rows.append(row)
+        elif r["feature_type"] == "minor_stream":
+            minor_rows.append(row)
+
+    body_rows_raw = _call_mitrearth_rpc("nw_mitrearth_water_bodies_in_bbox", bbox)
+    body_rows = []
+    for r in body_rows_raw:
+        geom = shapely.geometry.shape(json.loads(r["geom_geojson"]))
+        row = dict(r.get("source_attrs") or {})
+        row["geometry"] = geom
+        body_rows.append(row)
+
+    def _to_gdf(rows):
+        if not rows:
+            return gpd.GeoDataFrame({"geometry": []}, geometry="geometry", crs="EPSG:4326").to_crs("EPSG:32647")
+        gdf = gpd.GeoDataFrame(rows, geometry="geometry", crs="EPSG:4326")
+        return gdf.to_crs("EPSG:32647")
+
+    return _to_gdf(major_rows), _to_gdf(minor_rows), _to_gdf(body_rows)
+
+
 def load_osm_waterways(osm_geojson_path: str):
     """โหลดเส้นทางน้ำจาก OSM (ไฟล์ GeoJSON ที่เตรียมไว้ล่วงหน้า — ดูหมายเหตุข้อจำกัดเครือข่ายด้านบนไฟล์)
     คาดว่า geometry เป็น LineString ใน EPSG:4326 (ค่ามาตรฐาน GeoJSON/OSM) — แปลงเป็น EPSG:32647"""
@@ -355,17 +438,31 @@ def ingest(data_raw_dir: str, osm_geojson_path: str, province_th: str, amphoe_th
     # ล้มทั้ง pipeline — ผลลัพธ์จะได้ผังจาก OSM ล้วน ๆ (ยังใช้งานได้จริง เพียงแต่ยังไม่มีการเติมเส้นที่ OSM
     # สำรวจไม่ครบ) ผู้ดูแลระบบเพิ่มข้อมูล provincial_gis ของจังหวัดนั้นทีหลังได้ตามที่อธิบายไว้ใน
     # 02_engine_data/README.md แล้วรัน engine ใหม่อีกครั้งเพื่อให้ได้ผังที่สมบูรณ์ขึ้น
-    folder_map = build_province_folder_map(data_raw_dir)
-    province_folder = folder_map.get(province_th)
-    if province_folder is None:
-        print(f"⚠️  ไม่พบโฟลเดอร์ provincial_gis สำหรับจังหวัด '{province_th}' — ข้ามการเติมข้อมูลเสริม mitrearth "
-              f"(ใช้ OSM เป็นแหล่งเดียว ตาม ADR-003 ข้อมูล mitrearth เป็นแค่ส่วนเสริมอยู่แล้ว ไม่ใช่แหล่งหลัก)",
-              file=sys.stderr)
-        empty_geom = gpd.GeoDataFrame({"geometry": []}, geometry="geometry", crs="EPSG:32647")
-        major, minor, body = empty_geom.copy(), empty_geom.copy(), empty_geom.copy()
-    else:
-        code_prefix = os.path.basename(province_folder).split("_", 1)[0]
-        major, minor, body = load_surface_water(province_folder, code_prefix)
+    major = minor = body = None
+    if SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY:
+        try:
+            major, minor, body = load_mitrearth_from_supabase(boundary_buffered)
+            print(f"  mitrearth (เสริม, จาก Supabase): major_river {len(major)}, minor_stream {len(minor)}, "
+                  f"water_body {len(body)} รูป (ในกรอบ bbox ของตำบล+buffer)", file=sys.stderr)
+        except Exception as e:
+            print(f"⚠️  ดึงข้อมูล mitrearth จาก Supabase ไม่สำเร็จ ({type(e).__name__}: {e}) — ลอง fallback ไปใช้ "
+                  f"shapefile ในเครื่องแทน (ถ้ามี bundled ไว้)", file=sys.stderr)
+            major = minor = body = None
+
+    if major is None:
+        folder_map = build_province_folder_map(data_raw_dir)
+        province_folder = folder_map.get(province_th)
+        if province_folder is None:
+            prefix = ("ยังไม่ได้ตั้งค่า SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY และ"
+                      if not (SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY) else "Supabase เรียกไม่สำเร็จ และ")
+            print(f"⚠️  {prefix}ไม่พบโฟลเดอร์ provincial_gis สำหรับจังหวัด '{province_th}' ในเครื่อง — ข้ามการเติม"
+                  f"ข้อมูลเสริม mitrearth (ใช้ OSM เป็นแหล่งเดียว ตาม ADR-003 ข้อมูล mitrearth เป็นแค่ส่วนเสริม"
+                  f"อยู่แล้ว ไม่ใช่แหล่งหลัก)", file=sys.stderr)
+            empty_geom = gpd.GeoDataFrame({"geometry": []}, geometry="geometry", crs="EPSG:32647")
+            major, minor, body = empty_geom.copy(), empty_geom.copy(), empty_geom.copy()
+        else:
+            code_prefix = os.path.basename(province_folder).split("_", 1)[0]
+            major, minor, body = load_surface_water(province_folder, code_prefix)
 
     osm_raw = load_osm_waterways(osm_geojson_path)
 
