@@ -90,6 +90,7 @@
         <button class="tool-btn" onclick="selectTool('weir_plan', this)"><span class="icon" style="color:gray;">▭</span> ฝาย (แผน)</button>
 
         <h3>4. จัดการข้อมูล (แก้ไข/หมุน/ลบ)</h3>
+        <button class="tool-btn" onclick="onShowVersionHistoryClick()"><span class="icon" style="color:#6f42c1; font-size:16px;">&#8635;</span> ดูประวัติ/กู้คืน version เก่า</button>
         <button class="tool-btn" onclick="selectTool('text_box', this)"><span class="icon" style="color:#0056b3; font-size:16px;">T</span> วางข้อความอิสระ</button>
         <button class="tool-btn edit" onclick="selectTool('edit_info', this)"><span class="icon" style="color:#856404; font-size:16px;">✎</span> แก้ไขชื่อ/รายละเอียด</button>
         <button class="tool-btn rotate" onclick="selectTool('rotate', this)"><span class="icon" style="color:#17a2b8; font-size:18px;">↻</span> หมุนสัญลักษณ์ (90 องศา)</button>
@@ -103,6 +104,21 @@
         <button style="margin-top: 15px; padding: 10px; background: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight:bold;" onclick="exportData()">
             บันทึกผังน้ำชุมชน
         </button>
+    </div>
+
+    <!-- Task (Ton, 2026-08-31): modal "ดูประวัติ/กู้คืน version เก่า" — เรียก RPC nw_list_diagram_versions
+         (อ่านอย่างเดียว) / nw_restore_diagram_version (ต้องรหัส manager_tab เหมือน "รัน Engine ใหม่" เพราะ
+         กระทบผังที่ทุกคนเห็นเหมือนกัน) — กู้คืนจริงคือสร้าง version ใหม่คัดลอกจากของเก่า ไม่ได้ย้อนแก้ของเก่าตรง ๆ
+         (คง audit trail แบบ append-only เดิมไว้ทั้งหมด ดู migration add_diagram_version_history_and_restore) -->
+    <div id="version-history-modal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:#fff; border-radius:8px; padding:16px; width:480px; max-width:90vw; max-height:80vh; overflow-y:auto; box-shadow:0 4px 20px rgba(0,0,0,0.3);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h3 style="margin:0; border:none; padding:0;">ประวัติผังน้ำ — <span id="version-history-tambon-name"></span></h3>
+                <button onclick="closeVersionHistoryModal()" style="border:none; background:none; font-size:20px; cursor:pointer; color:#666; line-height:1;">&times;</button>
+            </div>
+            <div id="version-history-status" style="font-size:12px; color:#666; margin-bottom:8px;"></div>
+            <div id="version-history-list"></div>
+        </div>
     </div>
 
     <div id="cy"></div>
@@ -280,6 +296,108 @@
             } catch (e) {
                 console.error('โหลดผังจาก Supabase ผิดพลาด', e);
                 return null;
+            }
+        }
+
+        // ===== ดูประวัติ/กู้คืน version เก่า (Task, 2026-08-31) =====
+        // sourceLabel: แปลค่า source ดิบจาก DB (engine/community/restore) เป็นข้อความอ่านง่ายสำหรับ manager
+        const VERSION_HISTORY_SOURCE_LABEL = {
+            engine: 'รัน Engine อัตโนมัติ',
+            community: 'บันทึกจากชุมชน/manager',
+            restore: 'กู้คืนจาก version เก่า'
+        };
+
+        async function onShowVersionHistoryClick() {
+            if (!CURRENT_TAMBON || !CURRENT_TAMBON.tambon_id) {
+                alert('เลือกตำบลที่มีผังอยู่แล้วก่อน (ตำบลใหม่ที่ยังไม่เคยบันทึกจะยังไม่มีประวัติ)');
+                return;
+            }
+            if (!supabaseClient) { alert('ยังไม่ได้เชื่อมต่อ Supabase'); return; }
+            document.getElementById('version-history-tambon-name').textContent = CURRENT_TAMBON.tambon_th || '';
+            document.getElementById('version-history-modal').style.display = 'flex';
+            await refreshVersionHistoryList();
+        }
+
+        function closeVersionHistoryModal() {
+            document.getElementById('version-history-modal').style.display = 'none';
+        }
+
+        async function refreshVersionHistoryList() {
+            const statusEl = document.getElementById('version-history-status');
+            const listEl = document.getElementById('version-history-list');
+            statusEl.style.color = '#666';
+            statusEl.textContent = 'กำลังโหลด...';
+            listEl.innerHTML = '';
+            try {
+                const { data, error } = await supabaseClient.rpc('nw_list_diagram_versions', { p_tambon_id: CURRENT_TAMBON.tambon_id });
+                if (error) {
+                    statusEl.style.color = '#dc3545';
+                    statusEl.textContent = 'โหลดประวัติไม่สำเร็จ: ' + error.message;
+                    return;
+                }
+                if (!data || data.length === 0) {
+                    statusEl.textContent = 'ยังไม่มีประวัติการบันทึกสำหรับตำบลนี้';
+                    return;
+                }
+                statusEl.textContent = 'พบ ' + data.length + ' version (เรียงล่าสุดก่อน — กด "กู้คืน" เพื่อดึง version นั้นกลับมาแสดงผลแทนของปัจจุบัน)';
+
+                data.forEach(v => {
+                    const row = document.createElement('div');
+                    const borderColor = v.is_current ? '#28a745' : '#ddd';
+                    row.style.cssText = 'border:1px solid ' + borderColor + '; border-radius:6px; padding:8px; margin-bottom:6px; font-size:12px;' + (v.is_current ? ' background:#f0fff4;' : '');
+                    const dt = new Date(v.created_at);
+                    const dtStr = dt.toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' });
+                    const sourceText = VERSION_HISTORY_SOURCE_LABEL[v.source] || v.source;
+                    const currentBadge = v.is_current ? ' <span style="color:#28a745; font-weight:bold;">(กำลังแสดงอยู่)</span>' : '';
+                    const labelLine = v.label ? ('<br><span style="color:#999;">' + v.label + '</span>') : '';
+                    const restoreBtn = v.is_current ? '' :
+                        ('<button class="tool-btn" style="margin:0; white-space:nowrap;" onclick="onRestoreVersionClick(\'' + v.version_id + '\')">&#8635; กู้คืน</button>');
+                    row.innerHTML =
+                        '<div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">' +
+                            '<div>' +
+                                '<strong>' + sourceText + '</strong>' + currentBadge +
+                                '<br><span style="color:#666;">' + dtStr + ' — ' + v.node_count + ' node, ' + v.edge_count + ' เส้น</span>' +
+                                labelLine +
+                            '</div>' +
+                            restoreBtn +
+                        '</div>';
+                    listEl.appendChild(row);
+                });
+            } catch (e) {
+                statusEl.style.color = '#dc3545';
+                statusEl.textContent = 'เกิดข้อผิดพลาด: ' + e.message;
+            }
+        }
+
+        async function onRestoreVersionClick(versionId) {
+            if (!confirm('ยืนยันกู้คืน version นี้กลับมาเป็นผังที่แสดงผล?\n(ผังปัจจุบันจะไม่หายไปไหน ยังอยู่ในประวัติเหมือนเดิม เห็นได้จากลิสต์นี้)')) return;
+            const password = prompt('กรอกรหัสผ่าน manager ของตำบล "' + CURRENT_TAMBON.tambon_th + '" เพื่อยืนยันการกู้คืน');
+            if (!password) return;
+            const statusEl = document.getElementById('version-history-status');
+            statusEl.style.color = '#666';
+            statusEl.textContent = 'กำลังกู้คืน...';
+            try {
+                const { data, error } = await supabaseClient.rpc('nw_restore_diagram_version', {
+                    p_tambon_id: CURRENT_TAMBON.tambon_id, p_manager_password: password, p_version_id: versionId
+                });
+                if (error || !data || !data.success) {
+                    statusEl.style.color = '#dc3545';
+                    statusEl.textContent = 'กู้คืนไม่สำเร็จ: ' + (error ? error.message : (data && data.error ? data.error : 'unknown error'));
+                    return;
+                }
+                statusEl.style.color = '#28a745';
+                statusEl.textContent = 'กู้คืนสำเร็จ! กำลังโหลดผังใหม่...';
+                const els = await loadElementsFromSupabase(CURRENT_TAMBON.tambon_id);
+                if (els && cy) {
+                    cy.elements().remove();
+                    cy.add(els);
+                    cy.layout({ name: 'preset' }).run();
+                    cy.fit(undefined, 40); // ปรับมุมมองให้เห็นผังทั้งหมดเสมอ (สอดคล้องกับจุดโหลดผังอื่น ๆ ในไฟล์นี้)
+                }
+                await refreshVersionHistoryList();
+            } catch (e) {
+                statusEl.style.color = '#dc3545';
+                statusEl.textContent = 'เกิดข้อผิดพลาด: ' + e.message;
             }
         }
 
