@@ -92,7 +92,7 @@
         <h3>4. จัดการข้อมูล (แก้ไข/หมุน/ลบ)</h3>
         <button class="tool-btn" onclick="onShowVersionHistoryClick()"><span class="icon" style="color:#6f42c1; font-size:16px;">&#8635;</span> ดูประวัติ/กู้คืน version เก่า</button>
         <button class="tool-btn" onclick="selectTool('text_box', this)"><span class="icon" style="color:#0056b3; font-size:16px;">T</span> วางข้อความอิสระ</button>
-        <button class="tool-btn edit" onclick="selectTool('edit_info', this)"><span class="icon" style="color:#856404; font-size:16px;">✎</span> แก้ไขชื่อ/รายละเอียด</button>
+        <button class="tool-btn edit" onclick="selectTool('edit_info', this)"><span class="icon" style="color:#856404; font-size:16px;">✎</span> แก้ไขชื่อ/รายละเอียด/สถานะ</button>
         <button class="tool-btn rotate" onclick="selectTool('rotate', this)"><span class="icon" style="color:#17a2b8; font-size:18px;">↻</span> หมุนสัญลักษณ์ (90 องศา)</button>
         <button class="tool-btn danger" onclick="selectTool('delete', this)"><span class="icon" style="color:red;">✖</span> ลบข้อมูล (เส้น/โหนด)</button>
 
@@ -124,9 +124,21 @@
     <div id="cy"></div>
 
     <script>
+        // ลายเส้นทแยง "ชำรุด" (Task, Ton 2026-09-02) — ตามคู่มือ สสน. ปตร./ฝาย ชำรุด ใช้ลายเส้นทแยงในตัวสัญลักษณ์
+        // เดียวกับสถานะปกติ (ไม่ใช่ไอคอนใหม่) — อ่างเก็บน้ำ/สถานีสูบน้ำ/สถานีโทรมาตรไม่มีสัญลักษณ์ชำรุดกำหนดไว้ใน
+        // คู่มือ จึงออกแบบเพิ่มให้เข้าธีมเดียวกัน (ลายเส้นทแยงเหมือนกันหมด) ตามที่ Ton เลือก — คลิป (background-clip)
+        // ตามรูปทรงของแต่ละโหนดอัตโนมัติ เพราะ Cytoscape.js ตัด background-image ตาม shape ให้เองเป็นค่าเริ่มต้น
+        const STATUS_BROKEN_HATCH = "data:image/svg+xml;utf8," + encodeURIComponent(
+            '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40">' +
+            '<rect width="40" height="40" fill="white"/>' +
+            '<g stroke="black" stroke-width="3">' +
+            '<line x1="0" y1="40" x2="40" y2="0"/><line x1="-10" y1="30" x2="30" y2="-10"/>' +
+            '<line x1="10" y1="50" x2="50" y2="10"/></g></svg>'
+        );
+
         let currentTool = null;
-        let sourceNodeForEdge = null; 
-        let nodeCount = 100; 
+        let sourceNodeForEdge = null;
+        let nodeCount = 100;
 
         // ระบบ History สำหรับ Undo/Redo
         let historyStack = [];
@@ -281,7 +293,7 @@
                 if (!nodeRows || nodeRows.length === 0) return null; // ยังไม่เคย publish เข้า Supabase เลย
 
                 const nodeEls = nodeRows.map(r => ({
-                    data: { id: r.node_key, label: r.label || '', type: r.node_type || undefined, rotation: r.rotation || 0, dir: r.dir || 'h', sourceRef: r.source_ref || '' },
+                    data: { id: r.node_key, label: r.label || '', type: r.node_type || undefined, rotation: r.rotation || 0, dir: r.dir || 'h', sourceRef: r.source_ref || '', status: r.status || '' },
                     position: { x: r.pos_x, y: r.pos_y }
                 }));
                 const edgeEls = (edgeRows || []).map(r => ({
@@ -711,8 +723,16 @@
                 { selector: 'node[type="telemetry"]', style: { 'shape': 'ellipse', 'background-color': 'white', 'border-width': 4, 'border-color': 'black', 'width': 20, 'height': 20 } },
                 { selector: 'node[type="pump"]', style: { 'shape': 'ellipse', 'background-color': 'white', 'border-width': 2, 'border-color': 'black', 'width': 25, 'height': 25, 'label': 'P', 'text-valign': 'center', 'text-halign': 'center', 'font-weight': 'bold', 'color': 'black', 'font-size': '14px' } },
                 { selector: 'node[type="waterbody"]', style: { 'shape': 'round-rectangle', 'background-color': '#99ccff', 'border-width': 1, 'border-color': '#0056b3', 'width': 70, 'height': 35, 'text-valign': 'center', 'text-margin-y': 0, 'color': '#003366', 'font-weight': 'bold' } },
-                { selector: 'node[type="waterbody"][dir="v"]', style: { 'width': 35, 'height': 70 } }, 
-                
+                { selector: 'node[type="waterbody"][dir="v"]', style: { 'width': 35, 'height': 70 } },
+
+                /* สถานะ "ชำรุด" (Task, Ton 2026-09-02) — ลายเส้นทแยงทับสัญลักษณ์เดิม แทนที่ background-color ทึบ
+                   ต้องอยู่หลังกฎ node[type=...] ด้านบนเสมอ เพื่อให้ background-image ทับ background-color เดิม */
+                { selector: 'node[type="gate"][status="ชำรุด"]', style: { 'background-image': STATUS_BROKEN_HATCH, 'background-fit': 'cover', 'background-color': 'white' } },
+                { selector: 'node[type="weir"][status="ชำรุด"]', style: { 'background-image': STATUS_BROKEN_HATCH, 'background-fit': 'cover', 'background-color': 'white' } },
+                { selector: 'node[type="reservoir"][status="ชำรุด"]', style: { 'background-image': STATUS_BROKEN_HATCH, 'background-fit': 'cover', 'background-color': 'white' } },
+                { selector: 'node[type="pump"][status="ชำรุด"]', style: { 'background-image': STATUS_BROKEN_HATCH, 'background-fit': 'cover' } },
+                { selector: 'node[type="telemetry"][status="ชำรุด"]', style: { 'background-image': STATUS_BROKEN_HATCH, 'background-fit': 'cover' } },
+
                 { selector: '.selected-source', style: { 'border-width': 3, 'border-color': '#ffc107', 'background-color': '#ffc107' } }
             ]
         });
@@ -781,6 +801,20 @@
                         if (newRef !== null) {
                             target.data('sourceRef', newRef.trim());
                             saveState(); // บันทึก History หลังแก้รหัสอ้างอิง
+                        }
+
+                        // สถานะโครงสร้าง "ชำรุด" (Task, Ton 2026-09-02) — ถามเฉพาะโครงสร้าง "ปัจจุบัน" ที่สร้างจริง
+                        // แล้ว 5 ชนิด (ปตร./ฝาย/อ่างเก็บน้ำ/สถานีสูบน้ำ/สถานีโทรมาตร) — ไม่ถามกับโหนดแบบ "แผน" (ยัง
+                        // ไม่สร้างจริง จึงชำรุดไม่ได้), จุดเชื่อมทั่วไป, แหล่งน้ำ, หรือข้อความอิสระ
+                        const statusEligibleTypes = ['gate', 'weir', 'reservoir', 'pump', 'telemetry'];
+                        if (statusEligibleTypes.includes(target.data('type'))) {
+                            let currentStatus = target.data('status') || '';
+                            let statusPrompt = 'สถานะโครงสร้าง — พิมพ์ "ชำรุด" ถ้าจุดนี้ชำรุดใช้งานไม่ได้ (เว้นว่าง = ปกติ ใช้งานได้):';
+                            let newStatus = prompt(statusPrompt, currentStatus);
+                            if (newStatus !== null) {
+                                target.data('status', newStatus.trim() === 'ชำรุด' ? 'ชำรุด' : '');
+                                saveState(); // บันทึก History หลังแก้สถานะ
+                            }
                         }
                     }
                 }
@@ -902,7 +936,8 @@
                         node_key: d.id, label: d.label || '', node_type: d.type || null,
                         rotation: d.rotation || 0, dir: d.dir || 'h',
                         pos_x: el.position.x, pos_y: el.position.y,
-                        source_ref: d.sourceRef || null
+                        source_ref: d.sourceRef || null,
+                        status: d.status || null
                     });
                 }
             });

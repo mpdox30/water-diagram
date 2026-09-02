@@ -38,7 +38,7 @@ import sys
 import matplotlib
 matplotlib.use("Agg")  # ไม่ต้องมีจอ/display ก็รันได้ (เผื่อรันบน server ทีหลังตามที่ Ton บอกว่าจะทำเป็นปุ่ม)
 import matplotlib.pyplot as plt
-from matplotlib.patches import FancyArrowPatch, Polygon, Rectangle, RegularPolygon
+from matplotlib.patches import FancyArrowPatch, Patch, Polygon, Rectangle, RegularPolygon
 from matplotlib.lines import Line2D
 import requests
 
@@ -100,40 +100,53 @@ def fetch_diagram(tambon_id):
 # แต่ละ entry: (label ที่โชท์ใน legend, ฟังก์ชันวาด)
 # ---------------------------------------------------------------------------
 
-def _draw_gate(ax, x, y, filled):
+# สถานะ "ชำรุด" (Task, Ton 2026-09-02) — ตามคู่มือ สสน. หน้า 16-17: ปตร./ฝาย ชำรุด ใช้ลายเส้นทแยง (hatch)
+# ในตัวสัญลักษณ์เดียวกับสถานะปกติ แทนสีทึบ/สีขาว — matplotlib รองรับผ่านพารามิเตอร์ hatch ของ Patch โดยตรง
+# ไม่ต้องพึ่งรูปภาพเหมือนฝั่ง Cytoscape.js (ดู STATUS_BROKEN_HATCH ใน 03_frontend/index.html ที่ใช้ลายเดียวกัน)
+# — อ่างเก็บน้ำ/สถานีสูบน้ำ/สถานีโทรมาตรไม่มีสัญลักษณ์ชำรุดกำหนดไว้ในคู่มือ จึงออกแบบเพิ่มให้เข้าธีมเดียวกัน
+# (ลายเส้นทแยงเหมือนกันหมด) ตามที่ Ton เลือกไว้
+_BROKEN_HATCH = "///"
+
+
+def _draw_gate(ax, x, y, filled, broken=False):
     size = 9
     diamond = RegularPolygon(
-        (x, y), numVertices=4, radius=size, orientation=0.785398,  # หุน�45 องศา = ข้าวหลามตัด
-        facecolor="black" if filled else "white", edgecolor="black", linewidth=1.3, zorder=5,
+        (x, y), numVertices=4, radius=size, orientation=0.785398,  # หมุน 45 องศา = ข้าวหลามตัด
+        facecolor="white" if broken else ("black" if filled else "white"),
+        edgecolor="black", linewidth=1.3, hatch=_BROKEN_HATCH if broken else None, zorder=5,
     )
     ax.add_patch(diamond)
 
 
-def _draw_weir(ax, x, y, filled, vertical):
+def _draw_weir(ax, x, y, filled, vertical, broken=False):
     w, h = (12, 32) if vertical else (32, 12)
     rect = Rectangle(
         (x - w / 2, y - h / 2), w, h,
-        facecolor="black" if filled else "white", edgecolor="black", linewidth=1.3, zorder=5,
+        facecolor="white" if broken else ("black" if filled else "white"),
+        edgecolor="black", linewidth=1.3, hatch=_BROKEN_HATCH if broken else None, zorder=5,
     )
     ax.add_patch(rect)
 
 
-def _draw_reservoir(ax, x, y, filled):
+def _draw_reservoir(ax, x, y, filled, broken=False):
     size = 11
     tri = RegularPolygon(
         (x, y), numVertices=3, radius=size,
-        facecolor="black" if filled else "white", edgecolor="black", linewidth=1.3, zorder=5,
+        facecolor="white" if broken else ("black" if filled else "white"),
+        edgecolor="black", linewidth=1.3, hatch=_BROKEN_HATCH if broken else None, zorder=5,
     )
     ax.add_patch(tri)
 
 
-def _draw_telemetry(ax, x, y):
-    ax.add_patch(plt.Circle((x, y), 9, facecolor="white", edgecolor="black", linewidth=1.8, zorder=5))
+def _draw_telemetry(ax, x, y, broken=False):
+    hatch = _BROKEN_HATCH if broken else None
+    ax.add_patch(plt.Circle((x, y), 9, facecolor="white", edgecolor="black", linewidth=1.8, hatch=hatch, zorder=5))
     ax.add_patch(plt.Circle((x, y), 4, facecolor="white", edgecolor="black", linewidth=1.2, zorder=5))
 
 
-def _draw_pump(ax, x, y):
-    ax.add_patch(plt.Circle((x, y), 11, facecolor="white", edgecolor="black", linewidth=1.3, zorder=5))
+def _draw_pump(ax, x, y, broken=False):
+    hatch = _BROKEN_HATCH if broken else None
+    ax.add_patch(plt.Circle((x, y), 11, facecolor="white", edgecolor="black", linewidth=1.3, hatch=hatch, zorder=5))
     ax.text(x, y, "P", ha="center", va="center", fontsize=10, fontweight="bold", zorder=6)
 
 
@@ -156,16 +169,28 @@ def _draw_generic(ax, x, y):
 
 
 NODE_LEGEND_LABEL = {
-    "gate": "ประตูระบายน้ำ/ปตร. (ปัจจุนัน)",
+    "gate": "ประตูระบายน้ำ/ปตร. (ปัจจุบัน)",
     "gate_plan": "ประตูระบายน้ำ/ปตร. (แผน)",
-    "weir": "๝าย (ปัจจุนัน)",
-    "weir_plan": "๝าย (แผน)",
-    "reservoir": "อ่างเก็บน้ำ (ปัจจุนัน)",
+    "weir": "ฝาย (ปัจจุบัน)",
+    "weir_plan": "ฝาย (แผน)",
+    "reservoir": "อ่างเก็บน้ำ (ปัจจุบัน)",
     "reservoir_plan": "อ่างเก็บน้ำ (แผน)",
-    "telemetry": "สถานีขโทรมาตร",
-    "pump": "สถานีสุบน้ำ",
+    "telemetry": "สถานีโทรมาตร",
+    "pump": "สถานีสูบน้ำ",
     "waterbody": "แหล่งน้ำ (หนอง/บึง/สระน้ำ)",
 }
+
+# สถานะ "ชำรุด" ใช้กับโครงสร้าง "ปัจจุบัน" 5 ชนิดเท่านั้น (ดู draw_node) — ไม่ใช้กับ _plan เพราะโครงสร้างที่
+# ยังเป็นแผน ยังไม่สร้างจริง จึงชำรุดไม่ได้ กุญแจ dict นี้เป็น pseudo-type "<node_type>_broken" ใช้เฉพาะตอน
+# สร้าง legend (ดู render()) ไม่ใช่ค่าจริงของ node_type ในฐานข้อมูล
+NODE_LEGEND_LABEL_BROKEN = {
+    "gate_broken": "ประตูระบายน้ำ/ปตร. (ชำรุด)",
+    "weir_broken": "ฝาย (ชำรุด)",
+    "reservoir_broken": "อ่างเก็บน้ำ (ชำรุด)",
+    "telemetry_broken": "สถานีโทรมาตร (ชำรุด)",
+    "pump_broken": "สถานีสูบน้ำ (ชำรุด)",
+}
+STATUS_BROKEN_ELIGIBLE_TYPES = {"gate", "weir", "reservoir", "telemetry", "pump"}
 
 
 def draw_node(ax, node):
@@ -173,23 +198,24 @@ def draw_node(ax, node):
     node_type = node.get("node_type")
     vertical = (node.get("dir") == "v")
     label = node.get("label") or ""
+    broken = node.get("status") == "ชำรุด" and node_type in STATUS_BROKEN_ELIGIBLE_TYPES
 
     if node_type == "gate":
-        _draw_gate(ax, x, y, filled=True)
+        _draw_gate(ax, x, y, filled=True, broken=broken)
     elif node_type == "gate_plan":
         _draw_gate(ax, x, y, filled=False)
     elif node_type == "weir":
-        _draw_weir(ax, x, y, filled=True, vertical=vertical)
+        _draw_weir(ax, x, y, filled=True, vertical=vertical, broken=broken)
     elif node_type == "weir_plan":
         _draw_weir(ax, x, y, filled=False, vertical=vertical)
     elif node_type == "reservoir":
-        _draw_reservoir(ax, x, y, filled=True)
+        _draw_reservoir(ax, x, y, filled=True, broken=broken)
     elif node_type == "reservoir_plan":
         _draw_reservoir(ax, x, y, filled=False)
     elif node_type == "telemetry":
-        _draw_telemetry(ax, x, y)
+        _draw_telemetry(ax, x, y, broken=broken)
     elif node_type == "pump":
-        _draw_pump(ax, x, y)
+        _draw_pump(ax, x, y, broken=broken)
     elif node_type == "waterbody":
         _draw_waterbody(ax, x, y, label, vertical, node.get("source_ref"))
         return  # label วาดในกล่องไปแล้ว ไม่ต้องวาดซ้ำด้านล่างนี้
@@ -251,7 +277,7 @@ def render(nodes, edges, title, out_path):
     ax.set_ylim(min(ys) - pad_y, max(ys) + pad_y)
 
     # สณคัญ: pos_x/pos_y มาจาก 04_export_frontend_data.py's to_screen_xy() ซึ่งกลับแกน Y ไว้แล้วให้เป็น
-    # "พิกัดหน้าจอ" แบบเดียท�eแต้งนี้ Cytoscape.js/เว็บ (y เพิ่ม = ลงล่าง, เหนือ=ค่า y น้อย/บนสุด) — matplotlib
+    # "พิกัดหน้าจอ" แบบเดียวกับที่ Cytoscape.js/เว็บ (y เพิ่ม = ลงล่าง, เหนือ=ค่า y น้อย/บนสุด) — matplotlib
     # ปกติแกน y ชี้ขึ้น (ตรงข้าม) ถ้าไม่ invert ตรงนี้ ทิศเหนือจะไปโผล่ด้านล่างภาพแทน กลับหัวกับผังบนเว็บ
     ax.invert_yaxis()
     ax.set_aspect("equal")
@@ -267,6 +293,10 @@ def render(nodes, edges, title, out_path):
 
     # 4) Legend เฉพาะสัญลักษณ์ที่ใช้จริงในแผ่นนี้ (ข้อบังคับข้อ 4 ของคู่มือ สสน.)
     used_node_types = {n.get("node_type") for n in nodes if n.get("node_type")}
+    used_broken_types = {
+        n.get("node_type") + "_broken" for n in nodes
+        if n.get("status") == "ชำรุด" and n.get("node_type") in STATUS_BROKEN_ELIGIBLE_TYPES
+    }
     used_edge_types_main = any(e.get("edge_type") == "main" for e in edges)
     used_edge_types_branch = any(e.get("edge_type") != "main" for e in edges)
 
@@ -281,6 +311,10 @@ def render(nodes, edges, title, out_path):
                                           markerfacecolor="black" if "plan" not in nt else "white",
                                           markeredgecolor="black", markersize=9,
                                           label=NODE_LEGEND_LABEL[nt]))
+    for bt in sorted(used_broken_types):
+        if bt in NODE_LEGEND_LABEL_BROKEN:
+            legend_handles.append(Patch(facecolor="white", edgecolor="black", hatch=_BROKEN_HATCH,
+                                         label=NODE_LEGEND_LABEL_BROKEN[bt]))
     if legend_handles:
         ax.legend(handles=legend_handles, loc="upper left", bbox_to_anchor=(1.0, 1.0),
                     fontsize=9, frameon=True, title="สัญลักษณ์")
