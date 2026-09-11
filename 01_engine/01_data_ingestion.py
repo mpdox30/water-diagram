@@ -101,15 +101,40 @@ MITREARTH_NAME_FIELD_MAX_BYTES = 35
 
 def _clean_possibly_truncated_mitrearth_name(name):
     """คืนชื่อเดิมถ้าดูสมบูรณ์ หรือ None ถ้าดูเหมือนถูกตัดคำจากข้อจำกัดฟิลด์ DBF 35 ไบต์ของ mitrearth
-    (ดูคำอธิบายที่ MITREARTH_NAME_FIELD_MAX_BYTES ด้านบน)"""
-    if not name:
-        return name
+    (ดูคำอธิบายที่ MITREARTH_NAME_FIELD_MAX_BYTES ด้านบน)
+
+    บั๊กที่เจอ (2026-09-11, ตำบลใหม่ ทับผึ้ง อ.ศรีสำโรง จ.สุโขทัย): ฟิลด์ชื่อที่ว่างเปล่าจาก mitrearth
+    บางแถวถูก pandas/geopandas อ่านมาเป็น NaN ชนิด float ไม่ใช่ None/"" — และ `not name` เป็น False สำหรับ
+    NaN (NaN ถือเป็นค่า truthy ใน Python) โค้ดเดิมจึงไหลต่อไปเรียก name.strip() บน float แล้วพัง
+    (AttributeError: 'float' object has no attribute 'strip') ต้องเช็ค NaN/ไม่ใช่ string ก่อนเรียก .strip()
+    เสมอ"""
+    if name is None:
+        return None
+    if isinstance(name, float) and pd.isna(name):
+        return None
+    if not isinstance(name, str):
+        name = str(name)
     name = name.strip()
     if not name:
         return None
     if len(name.encode("utf-8")) >= MITREARTH_NAME_FIELD_MAX_BYTES:
         return None
     return name
+
+
+def _first_non_empty_field(*values):
+    """คืนค่าแรกที่ไม่ว่าง/ไม่ใช่ NaN จากรายการฟิลด์ที่ส่งมา (เช่น HY_LNAME, str_name_t, str_name_e)
+    ใช้แทน `a or b or c` ตรงๆ เพราะ NaN (float) เป็น truthy ใน Python — `a or b` จะคืน NaN ทันทีถ้า a เป็น
+    NaN โดยไม่ลองดู b/c ต่อเลย ทำให้ได้ค่า NaN หลุดออกไปทั้งที่ฟิลด์ถัดไปอาจมีชื่อจริงอยู่ก็ได้"""
+    for v in values:
+        if v is None:
+            continue
+        if isinstance(v, float) and pd.isna(v):
+            continue
+        if isinstance(v, str) and not v.strip():
+            continue
+        return v
+    return None
 
 # ชื่อโฟลเดอร์ provincial_gis บางจังหวัดสะกดต่างจากชื่อทางการใน THA_Province.P_NAME_E เล็กน้อย (คนละเรื่องกับ
 # บั๊ก field-width truncation ที่เจอใน pilot รอบก่อน — นี่คือความต่างของการสะกดชื่อจริง ๆ) พบระหว่างทดสอบรันกับ
@@ -400,7 +425,7 @@ def classify_waterway_sources(osm_lines, mitrearth_lines,
             new_row = row.to_dict()
             new_row["source"] = "mitrearth_supplement"
             new_row["waterway_tag"] = row.get("source_layer")
-            raw_name = row.get("HY_LNAME") or row.get("str_name_t") or row.get("str_name_e")
+            raw_name = _first_non_empty_field(row.get("HY_LNAME"), row.get("str_name_t"), row.get("str_name_e"))
             new_row["name"] = _clean_possibly_truncated_mitrearth_name(raw_name)
             new_row["mitrearth_osm_coverage_frac"] = round(frac, 3)
             supplement_rows.append(new_row)
