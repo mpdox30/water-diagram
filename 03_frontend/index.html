@@ -88,6 +88,7 @@
         <h3>3. แผนในอนาคต (โปร่งขอบดำ)</h3>
         <button class="tool-btn" onclick="selectTool('gate_plan', this)"><span class="icon" style="color:gray;">◇</span> ปตร. (แผน)</button>
         <button class="tool-btn" onclick="selectTool('weir_plan', this)"><span class="icon" style="color:gray;">▭</span> ฝาย (แผน)</button>
+        <button class="tool-btn" onclick="selectTool('reservoir_plan', this)"><span class="icon" style="color:gray;">△</span> อ่างเก็บน้ำ (แผน)</button>
 
         <h3>4. จัดการข้อมูล (แก้ไข/หมุน/ลบ)</h3>
         <button class="tool-btn" onclick="onShowVersionHistoryClick()"><span class="icon" style="color:#6f42c1; font-size:16px;">&#8635;</span> ดูประวัติ/กู้คืน version เก่า</button>
@@ -719,7 +720,8 @@
                 { selector: 'node[type="gate_plan"]', style: { 'shape': 'diamond', 'background-color': 'white', 'border-width': 2, 'border-color': 'black', 'width': 25, 'height': 25, 'text-margin-y': -15 } },
                 { selector: 'node[type="weir_plan"]', style: { 'shape': 'rectangle', 'background-color': 'white', 'border-width': 2, 'border-color': 'black', 'width': 35, 'height': 12, 'text-margin-y': -10 } },
                 { selector: 'node[type="weir_plan"][dir="v"]', style: { 'width': 12, 'height': 35, 'text-margin-y': -5, 'text-margin-x': 0, 'text-valign': 'top', 'text-halign': 'center' } },
-                
+                { selector: 'node[type="reservoir_plan"]', style: { 'shape': 'triangle', 'background-color': 'white', 'border-width': 2, 'border-color': 'black', 'width': 30, 'height': 30, 'text-margin-y': -15 } },
+
                 { selector: 'node[type="telemetry"]', style: { 'shape': 'ellipse', 'background-color': 'white', 'border-width': 4, 'border-color': 'black', 'width': 20, 'height': 20 } },
                 { selector: 'node[type="pump"]', style: { 'shape': 'ellipse', 'background-color': 'white', 'border-width': 2, 'border-color': 'black', 'width': 25, 'height': 25, 'label': 'P', 'text-valign': 'center', 'text-halign': 'center', 'font-weight': 'bold', 'color': 'black', 'font-size': '14px' } },
                 { selector: 'node[type="waterbody"]', style: { 'shape': 'round-rectangle', 'background-color': '#99ccff', 'border-width': 1, 'border-color': '#0056b3', 'width': 70, 'height': 35, 'text-valign': 'center', 'text-margin-y': 0, 'color': '#003366', 'font-weight': 'bold' } },
@@ -727,11 +729,11 @@
 
                 /* สถานะ "ชำรุด" (Task, Ton 2026-09-02) — ลายเส้นทแยงทับสัญลักษณ์เดิม แทนที่ background-color ทึบ
                    ต้องอยู่หลังกฎ node[type=...] ด้านบนเสมอ เพื่อให้ background-image ทับ background-color เดิม */
-                { selector: 'node[type="gate"][status="ชำรุด"]', style: { 'background-image': STATUS_BROKEN_HATCH, 'background-fit': 'cover', 'background-color': 'white' } },
-                { selector: 'node[type="weir"][status="ชำรุด"]', style: { 'background-image': STATUS_BROKEN_HATCH, 'background-fit': 'cover', 'background-color': 'white' } },
-                { selector: 'node[type="reservoir"][status="ชำรุด"]', style: { 'background-image': STATUS_BROKEN_HATCH, 'background-fit': 'cover', 'background-color': 'white' } },
-                { selector: 'node[type="pump"][status="ชำรุด"]', style: { 'background-image': STATUS_BROKEN_HATCH, 'background-fit': 'cover' } },
-                { selector: 'node[type="telemetry"][status="ชำรุด"]', style: { 'background-image': STATUS_BROKEN_HATCH, 'background-fit': 'cover' } },
+                { selector: 'node[type="gate"][status="ชำรุด"]', style: { 'background-image': STATUS_BROKEN_HATCH, 'background-fit': 'cover', 'background-color': 'white', 'border-width': 2, 'border-color': 'black' } },
+                { selector: 'node[type="weir"][status="ชำรุด"]', style: { 'background-image': STATUS_BROKEN_HATCH, 'background-fit': 'cover', 'background-color': 'white', 'border-width': 2, 'border-color': 'black' } },
+                { selector: 'node[type="reservoir"][status="ชำรุด"]', style: { 'background-image': STATUS_BROKEN_HATCH, 'background-fit': 'cover', 'background-color': 'white', 'border-width': 2, 'border-color': 'black' } },
+                { selector: 'node[type="pump"][status="ชำรุด"]', style: { 'background-image': STATUS_BROKEN_HATCH, 'background-fit': 'cover', 'border-width': 2, 'border-color': 'black' } },
+                { selector: 'node[type="telemetry"][status="ชำรุด"]', style: { 'background-image': STATUS_BROKEN_HATCH, 'background-fit': 'cover', 'border-width': 4, 'border-color': 'black' } },
 
                 { selector: '.selected-source', style: { 'border-width': 3, 'border-color': '#ffc107', 'background-color': '#ffc107' } }
             ]
@@ -753,7 +755,7 @@
             const insertTools = ['gate', 'weir', 'reservoir', 'telemetry', 'pump', 'gate_plan', 'weir_plan', 'reservoir_plan', 'generic_node'];
             const labelMap = { 
                 gate: 'ปตร.', weir: 'ฝาย', reservoir: 'อ่างฯ', telemetry: 'โทรมาตร', pump: '', 
-                gate_plan: 'ปตร.(แผน)', weir_plan: 'ฝาย(แผน)', generic_node: '', waterbody: 'ชื่อแหล่งน้ำ\n(ความจุ)'
+                gate_plan: 'ปตร.(แผน)', weir_plan: 'ฝาย(แผน)', reservoir_plan: 'อ่างฯ(แผน)', generic_node: '', waterbody: 'ชื่อแหล่งน้ำ\n(ความจุ)'
             };
 
             // 1. โหมดหมุนสัญลักษณ์ (Rotate)
